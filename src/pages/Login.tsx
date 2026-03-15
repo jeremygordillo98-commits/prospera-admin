@@ -79,8 +79,8 @@ export default function Login() {
           
           <div className="relative z-10 flex flex-col p-12 max-w-2xl w-full">
             <div className="mb-12 flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-[#3b82f6] to-[#8b5cf6] rounded-xl flex items-center justify-center text-white font-black text-2xl shadow-[0_8px_16px_rgba(59,130,246,0.4)]">
-                    P
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-[0_8px_16px_rgba(59,130,246,0.4)] overflow-hidden">
+                    <img src="/admin-logo.png" alt="Admin Logo" className="w-full h-full object-cover" />
                 </div>
                 <div>
                    <h1 className="text-3xl font-black tracking-tight text-white mb-0">PROSPERA</h1>

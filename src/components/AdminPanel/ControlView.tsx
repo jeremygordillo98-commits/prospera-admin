@@ -95,7 +95,7 @@ export default function ControlView() {
   const exportToPDF = () => {
     const doc = new jsPDF();
     const logoImg = new Image();
-    logoImg.src = '/logo-obscuro.png';
+    logoImg.src = '/admin-logo.png';
 
     const renderReport = () => {
         // Encabezado

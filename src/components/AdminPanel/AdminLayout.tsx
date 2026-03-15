@@ -98,16 +98,15 @@ export default function AdminLayout() {
             <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
                 <div style={{ 
                   width: 36, height: 36, 
-                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #10b981)', 
                   borderRadius: '12px', 
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center', 
-                  color: '#fff', 
-                  fontWeight: 900, 
-                  fontSize: '1.2rem',
-                  boxShadow: `0 8px 16px ${theme.primary}40`
-                }}>P</div>
+                  boxShadow: `0 8px 16px ${theme.primary}40`,
+                  overflow: 'hidden'
+                }}>
+                  <img src="/admin-logo.png" alt="Admin" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                </div>
                 <div style={{ fontWeight: 900, fontSize: '1.1rem', letterSpacing: '-0.5px' }}>
                   PROSPERA <span style={{ color: theme.primary, fontSize: '0.65rem', verticalAlign: 'middle', background: theme.primary + '15', padding: '2px 8px', borderRadius: '20px', marginLeft: '6px', fontWeight: 800 }}>ROOT</span>
                 </div>

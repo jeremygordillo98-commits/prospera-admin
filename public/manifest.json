@@ -1,7 +1,7 @@
 {
-  "name": "Prospera Finanzas",
-  "short_name": "Prospera",
-  "description": "Gestión financiera inteligente para alcanzar tus metas.",
+  "name": "Prospera Admin",
+  "short_name": "Admin",
+  "description": "Panel de Control Root para Prospera.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -10,13 +10,13 @@
   "categories": ["finance", "productivity"],
   "icons": [
     {
-      "src": "/logo-icon-obscuro.png?v=2",
+      "src": "/admin-icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/logo-icon-obscuro.png?v=2",
+      "src": "/admin-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
