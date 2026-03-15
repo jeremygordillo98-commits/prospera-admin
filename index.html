@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es" style="background-color: #0f172a;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <title>Prospera | Domina tu dinero con IA</title>
+    <meta name="description" content="Deja atrás las hojas de cálculo aburridas. Prospera es el asistente financiero inteligente que convierte el ahorro en un juego donde tú siempre ganas." />
+    
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://prosperafinanzas.com/" />
+    <meta property="og:title" content="Prospera | Domina tu dinero con IA" />
+    <meta property="og:description" content="Deja atrás las hojas de cálculo. Descubre tu nueva sede financiera con presupuestos automáticos e Inteligencia Artificial." />
+    <meta property="og:image" content="https://prosperafinanzas.com/ReporteCel.jpeg" />
+    
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://prosperafinanzas.com/" />
+    <meta property="twitter:title" content="Prospera | Domina tu dinero con IA" />
+    <meta property="twitter:description" content="Deja atrás las hojas de cálculo. Descubre tu nueva sede financiera con presupuestos automáticos e Inteligencia Artificial." />
+    <meta property="twitter:image" content="https://prosperafinanzas.com/ReporteCel.jpeg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    
+    <link rel="icon" type="image/png" href="/logo-icon-obscuro.png" />
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="/logo-icon-obscuro.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <style>
+      /* Fondo base para evitar el color blanco al cargar */
+      html {
+        background-color: #0f172a;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        min-height: 100vh;
+        background-color: #0f172a !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        /* Permitimos el scroll por defecto */
+        overflow-x: hidden;
+        overflow-y: auto;
+      }
+
+      /* Bloqueamos el scroll ÚNICAMENTE mientras el splash está activo */
+      body:not(.app-loaded) {
+        overflow: hidden;
+      }
+
+      #splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #0f172a;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        transition: opacity 0.4s ease-out, visibility 0.4s;
+      }
+
+      .loader-logo {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite ease-in-out;
+        object-fit: contain; /* NUEVO: Asegura que la imagen no se deforme */
+      }
+
+      .loader-text {
+        color: white;
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0;
+        letter-spacing: -0.5px;
+      }
+
+      .loader-bar {
+        margin-top: 20px;
+        width: 40px;
+        height: 4px;
+        background: #10b981;
+        border-radius: 10px;
+        animation: loading 1.5s infinite ease-in-out;
+      }
+
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(0.92); opacity: 0.7; }
+      }
+
+      @keyframes loading {
+        0% { transform: translateX(-20px); opacity: 0; }
+        50% { transform: translateX(0); opacity: 1; }
+        100% { transform: translateX(20px); opacity: 0; }
+      }
+
+      /* Ocultar el splash */
+      .app-loaded #splash-screen {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+    </style>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </head>
+  <body>
+    <div id="splash-screen">
+      <img src="/logo-icon-obscuro.png" alt="Cargando Prospera" class="loader-logo" />
+      <h1 class="loader-text">Prospera</h1>
+      <div class="loader-bar"></div>
+    </div>
+
+    <div id="root"></div>
+
+    <script>
+      function hideSplashScreen() {
+        document.body.classList.add('app-loaded');
+        setTimeout(() => {
+          const splash = document.getElementById('splash-screen');
+          if (splash) {
+            splash.style.display = 'none';
+          }
+        }, 500);
+      }
+
+      // Se ejecuta cuando todo el contenido inicial carga
+      window.addEventListener('load', hideSplashScreen);
+      
+      // Respaldo por si el evento load tarda demasiado
+      setTimeout(hideSplashScreen, 3500); 
+    </script>
+  </body>
+</html>

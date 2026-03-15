@@ -1,0 +1,49 @@
+
+> finanzas-simple@1.0.0 build
+> vite build
+
+[36mvite v8.0.0 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...✓ 831 modules transformed.
+[31m✗[39m Build failed in 122ms
+[31merror during build:
+[31mBuild failed with 2 errors:
+
+[plugin vite:css] C:/Users/DELL/Documents/App/Finanzas simple/finanzas-simple-v4_1/prospera-admin/index.html?html-proxy&inline-css&index=0.css
+Failed to load PostCSS config: Failed to load PostCSS config (searchPath: C:/Users/DELL/Documents/App/Finanzas simple/finanzas-simple-v4_1/prospera-admin): [Error] Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js
+
+(@C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js)
+Error: Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js
+
+(@C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js)
+    at load (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19558:10)
+    at async Promise.all (index 0)
+    at async plugins (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19580:11)
+    at async processResult (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19618:13)
+[plugin vite:css] C:/Users/DELL/Documents/App/Finanzas simple/finanzas-simple-v4_1/prospera-admin/index.html?html-proxy&inline-css&index=0.css
+Failed to load PostCSS config: Failed to load PostCSS config (searchPath: C:/Users/DELL/Documents/App/Finanzas simple/finanzas-simple-v4_1/prospera-admin): [Error] Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js
+
+(@C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js)
+Error: Loading PostCSS Plugin failed: Cannot find module '@tailwindcss/postcss'
+Require stack:
+- C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js
+
+(@C:\Users\DELL\Documents\App\Finanzas simple\finanzas-simple-v4_1\prospera-admin\postcss.config.js)
+    at load (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19558:10)
+    at async Promise.all (index 0)
+    at async plugins (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19580:11)
+    at async processResult (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:19618:13)[31m
+    at aggregateBindingErrorsIntoJsError (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/rolldown/dist/shared/error-CP8smW_P.mjs:48:18)
+    at unwrapBindingResult (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/rolldown/dist/shared/error-CP8smW_P.mjs:18:128)
+    at #build (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/rolldown/dist/shared/rolldown-build-4YnQkA76.mjs:3311:34)
+    at async buildEnvironment (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:32794:64)
+    at async Object.build (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:33216:19)
+    at async Object.buildApp (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/chunks/node.js:33213:153)
+    at async CAC.<anonymous> (file:///C:/Users/DELL/Documents/App/Finanzas%20simple/finanzas-simple-v4_1/prospera-admin/node_modules/vite/dist/node/cli.js:778:3) {
+  errors: [Getter/Setter]
+}[39m

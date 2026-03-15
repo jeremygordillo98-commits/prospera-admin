@@ -1,0 +1,25 @@
+{
+  "name": "Prospera Finanzas",
+  "short_name": "Prospera",
+  "description": "Gestión financiera inteligente para alcanzar tus metas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "/logo-icon-obscuro.png?v=2",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-icon-obscuro.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
