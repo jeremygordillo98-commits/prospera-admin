@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../context/ThemeContext';
 
-// --- ÍCONOS SVG ---
-const IconCheck = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
-const IconChevronDown = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>;
-const IconSend = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>;
-const IconBell = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>;
-const IconGlobe = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
-const IconPlus = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const IconSend = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>;
+const IconCheck = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>;
+const IconPlus = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
+const IconChevronDown = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>;
+const IconBell = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
+const IconGlobe = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
 
 export default function CommsView() {
   const { theme, isDark } = useTheme();
@@ -16,11 +15,12 @@ export default function CommsView() {
   
   // Soporte
   const [tickets, setTickets] = useState<any[]>([]);
-  const [adminReplies, setAdminReplies] = useState<{ [key: string]: string }>({});
   const [expandedChat, setExpandedChat] = useState<string | null>(null);
+  const [adminReplies, setAdminReplies] = useState<Record<string, string>>({});
 
   // Notificaciones App
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [sentNotifications, setSentNotifications] = useState<any[]>([]);
   const [notifForm, setNotifForm] = useState({ userId: 'all', title: '', content: '', type: 'info' });
   
   // Noticias Landing
@@ -32,32 +32,27 @@ export default function CommsView() {
     fetchTickets();
     fetchProfiles();
     fetchNews();
+    fetchSentNotifications();
 
-    // Suscripciones en tiempo real
-    const ticketSub = supabase.channel('soporte_admin')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'soporte_tickets' }, () => fetchTickets())
-      .subscribe();
-    
-    const newsSub = supabase.channel('news_admin')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'public_news' }, () => fetchNews())
-      .subscribe();
+    const ticketSub = supabase.channel('soporte_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'soporte_tickets' }, () => fetchTickets()).subscribe();
+    const newsSub = supabase.channel('news_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'public_news' }, () => fetchNews()).subscribe();
+    const notifSub = supabase.channel('notif_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications' }, () => fetchSentNotifications()).subscribe();
 
     return () => { 
       supabase.removeChannel(ticketSub); 
       supabase.removeChannel(newsSub);
+      supabase.removeChannel(notifSub);
     };
   }, []);
 
   const fetchTickets = async () => {
     const { data: ticketsData } = await supabase.from('soporte_tickets').select('*').order('created_at', { ascending: true });
     const { data: usersData } = await supabase.from('perfiles').select('id, nombre_completo, email');
-    
     if (ticketsData && usersData) {
-      const fixedData = ticketsData.map((t: any) => {
+      setTickets(ticketsData.map((t: any) => {
         const user = usersData.find(u => u.id === t.usuario_id);
         return { ...t, perfiles: { nombre_completo: user?.nombre_completo || 'Usuario', email: user?.email || '' } };
-      });
-      setTickets(fixedData);
+      }));
     }
   };
 
@@ -71,60 +66,55 @@ export default function CommsView() {
     if (data) setNewsList(data);
   };
 
+  const fetchSentNotifications = async () => {
+    const { data } = await supabase.from('user_notifications').select('*').order('created_at', { ascending: false }).limit(20);
+    if (data) setSentNotifications(data);
+  };
+
   const handleAdminReply = async (usuarioId: string) => {
     const respuesta = adminReplies[usuarioId];
     if (!respuesta?.trim()) return;
     await supabase.from('soporte_tickets').insert({ usuario_id: usuarioId, mensaje: respuesta, origen: 'admin', estado: 'abierto' });
     setAdminReplies(prev => ({ ...prev, [usuarioId]: "" }));
-    fetchTickets();
-  };
-
-  const handleSendNotification = async () => {
-    if (!notifForm.title || !notifForm.content) return alert("Completa título y mensaje");
-    
-    if (notifForm.userId === 'all') {
-      const inserts = profiles.map(p => ({
-        usuario_id: p.id,
-        title: notifForm.title,
-        content: notifForm.content,
-        type: notifForm.type
-      }));
-      await supabase.from('user_notifications').insert(inserts);
-    } else {
-      await supabase.from('user_notifications').insert({
-        usuario_id: notifForm.userId,
-        title: notifForm.title,
-        content: notifForm.content,
-        type: notifForm.type
-      });
-    }
-
-    alert("Notificación enviada con éxito");
-    setNotifForm({ userId: 'all', title: '', content: '', type: 'info' });
-  };
-
-  const handleSaveNews = async () => {
-    if (!newsForm.title || !newsForm.summary) return alert("Completa título y resumen");
-    await supabase.from('public_news').insert(newsForm);
-    alert("Noticia publicada");
-    setIsAddingNews(false);
-    setNewsForm({ title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
-    fetchNews();
-  };
-
-  const deleteNews = async (id: string) => {
-    if (window.confirm("¿Eliminar noticia?")) {
-      await supabase.from('public_news').delete().eq('id', id);
-      fetchNews();
-    }
   };
 
   const handleCloseTicket = async (usuarioId: string) => {
     if (window.confirm("¿Marcar conversación como resuelta?")) {
-        await supabase.from('soporte_tickets').update({ estado: 'cerrado' }).eq('usuario_id', usuarioId);
-        setExpandedChat(null);
-        fetchTickets();
+      await supabase.from('soporte_tickets').update({ estado: 'resuelto' }).eq('usuario_id', usuarioId);
+      fetchTickets();
     }
+  };
+
+  const handleSendNotification = async () => {
+    if (!notifForm.title || !notifForm.content) return alert("Completa título y mensaje");
+    if (notifForm.userId === 'all') {
+      const inserts = profiles.map(p => ({ user_id: p.id, title: notifForm.title, content: notifForm.content, type: notifForm.type }));
+      await supabase.from('user_notifications').insert(inserts);
+    } else {
+      await supabase.from('user_notifications').insert({ user_id: notifForm.userId, title: notifForm.title, content: notifForm.content, type: notifForm.type });
+    }
+    alert("Notificación enviada");
+    setNotifForm({ userId: 'all', title: '', content: '', type: 'info' });
+  };
+
+  const deleteNotification = async (id: string) => {
+    if (window.confirm("¿Ocultar/Eliminar del historial?")) {
+      await supabase.from('user_notifications').delete().eq('id', id);
+    }
+  };
+
+  const handleSaveNews = async () => {
+    if (!newsForm.title || !newsForm.content) return alert("Completa título y contenido");
+    const { error } = await supabase.from('public_news').insert([{ ...newsForm, published_at: new Date() }]);
+    if (!error) {
+      alert("Noticia publicada!");
+      setIsAddingNews(false);
+      setNewsForm({ title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+    } else alert("Error al publicar");
+  };
+
+  const deleteNews = async (id: string) => {
+    if (window.confirm("¿Eliminar esta noticia?")) await supabase.from('public_news').delete().eq('id', id);
   };
 
   const chatsAgrupados = tickets.filter(t => t.estado === 'abierto').reduce((acc: any, t) => {
@@ -133,208 +123,113 @@ export default function CommsView() {
     return acc;
   }, {});
 
-  const glassStyle = { 
-    background: isDark ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.6)', 
-    backdropFilter: 'blur(16px)',
-    borderRadius: 20, 
-    border: `1px solid ${theme.border}`, 
-    padding: 24,
-    boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.03)' 
-  };
-
   const tabStyle = (active: boolean) => ({
-    padding: '12px 20px',
-    background: active ? theme.primary : 'transparent',
-    color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
-    border: active ? 'none' : `1px solid ${theme.border}`,
-    borderRadius: '12px',
-    cursor: 'pointer',
-    fontWeight: 800,
-    fontSize: '0.85rem',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    transition: 'all 0.3s'
+    padding: '12px 20px', background: active ? theme.primary : 'transparent', color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
+    border: active ? 'none' : `1px solid ${theme.border}`, borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8, transition: 'all 0.3s'
   });
 
-  const inputStyle = { 
-    padding: '12px 16px', 
-    borderRadius: 12, 
-    border: `1px solid ${theme.border}`, 
-    background: theme.inputBg, 
-    color: theme.text, 
-    width: '100%', 
-    boxSizing: 'border-box' as const, 
-    outline: 'none',
-    fontSize: '0.9rem',
-    marginBottom: 12
-  };
+  const inputStyle = { padding: '12px 16px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.inputBg, color: theme.text, width: '100%', outline: 'none', fontSize: '0.9rem', marginBottom: 12 };
+  const cardStyle = { background: theme.card, borderRadius: 20, border: `1px solid ${theme.border}`, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.02)' };
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
-        
-        {/* TABS DE COMUNICACIÓN */}
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
-            <button onClick={() => setActiveSubTab('support')} style={tabStyle(activeSubTab === 'support')}><IconSend /> Soporte App</button>
-            <button onClick={() => setActiveSubTab('notifications')} style={tabStyle(activeSubTab === 'notifications')}><IconBell /> Notificaciones App</button>
-            <button onClick={() => setActiveSubTab('news')} style={tabStyle(activeSubTab === 'news')}><IconGlobe /> Noticias Landing</button>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <button onClick={() => setActiveSubTab('support')} style={tabStyle(activeSubTab === 'support')}><IconSend /> Soporte App</button>
+        <button onClick={() => setActiveSubTab('notifications')} style={tabStyle(activeSubTab === 'notifications')}><IconBell /> Notificaciones App</button>
+        <button onClick={() => setActiveSubTab('news')} style={tabStyle(activeSubTab === 'news')}><IconGlobe /> Noticias Landing</button>
+      </div>
+
+      {activeSubTab === 'support' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {Object.keys(chatsAgrupados).length === 0 ? (
+            <div style={{ textAlign: 'center', color: theme.textSec, padding: '60px 20px', border: `2px dashed ${theme.border}`, borderRadius: 16, background: theme.card }}>
+              <h3>Bandeja Limpia</h3><p>No hay mensajes pendientes.</p>
+            </div>
+          ) : Object.values(chatsAgrupados).map((chat: any) => (
+            <div key={chat.id} style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+              <div onClick={() => setExpandedChat(expandedChat === chat.id ? null : chat.id)} style={{ padding: 16, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedChat === chat.id ? theme.accent : 'transparent' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{chat.nombre.charAt(0).toUpperCase()}</div>
+                  <div><div style={{ fontWeight: 'bold' }}>{chat.nombre}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{chat.mensajes.length} mensajes recibidos</div></div>
+                </div>
+                <IconChevronDown />
+              </div>
+              {expandedChat === chat.id && (
+                <div style={{ padding: 20, borderTop: `1px solid ${theme.border}`, background: theme.bg }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
+                     <span style={{ fontSize: '0.8rem', color: theme.textSec }}>{chat.email}</span>
+                     <button onClick={() => handleCloseTicket(chat.id)} style={{ color: '#10b981', border: 'none', background: 'transparent', cursor: 'pointer', fontWeight: 900 }}>Marcar Resuelto</button>
+                   </div>
+                   <div style={{ maxHeight: 300, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, padding: 10, background: theme.card, borderRadius: 12, marginBottom: 15 }}>
+                     {chat.mensajes.map((m: any) => (
+                       <div key={m.id} style={{ alignSelf: m.origen === 'admin' ? 'flex-end' : 'flex-start', background: m.origen === 'admin' ? theme.primary : theme.inputBg, color: m.origen === 'admin' ? '#000' : theme.text, padding: '10px 14px', borderRadius: 12, maxWidth: '85%', fontSize: '0.85rem' }}>{m.mensaje}</div>
+                     ))}
+                   </div>
+                   <div style={{ display: 'flex', gap: 8 }}>
+                     <input type="text" value={adminReplies[chat.id] || ""} onChange={e => setAdminReplies({ ...adminReplies, [chat.id]: e.target.value })} placeholder="Escribir respuesta..." style={{ ...inputStyle, marginBottom: 0 }} />
+                     <button onClick={() => handleAdminReply(chat.id)} style={{ padding: '0 20px', borderRadius: 12, background: theme.primary, border: 'none', cursor: 'pointer' }}><IconSend /></button>
+                   </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
+      )}
 
-        {/* CONTENIDO SOPORTE */}
-        {activeSubTab === 'support' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {Object.keys(chatsAgrupados).length === 0 ? (
-                    <div style={{ textAlign: 'center', color: theme.textSec, padding: '60px 20px', border: `2px dashed ${theme.border}`, borderRadius: 16, background: theme.card }}>
-                        <h3 style={{margin: '0 0 10px 0', color: theme.text}}>Bandeja Limpia</h3>
-                        <p style={{margin: 0}}>No hay hilos de soporte abiertos.</p>
-                    </div>
-                ) : (
-                    Object.values(chatsAgrupados).map((chat: any) => (
-                        <div key={chat.id} style={{ background: theme.card, borderRadius: '16px', border: `1px solid ${theme.border}`, overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
-                            <div onClick={() => setExpandedChat(expandedChat === chat.id ? null : chat.id)} style={{ padding: '16px 20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedChat === chat.id ? theme.accent : 'transparent' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: theme.primary, color: isDark ? '#000' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
-                                        {chat.nombre.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div style={{ fontWeight: 'bold', color: theme.text }}>{chat.nombre}</div>
-                                        <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{chat.mensajes.length} mensajes</div>
-                                    </div>
-                                </div>
-                                <span style={{ color: theme.textSec, transition: 'transform 0.3s', transform: expandedChat === chat.id ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-                                    <IconChevronDown />
-                                </span>
-                            </div>
-                            {expandedChat === chat.id && (
-                                <div style={{ padding: '20px', borderTop: `1px solid ${theme.border}`, background: theme.bg }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                                        <span style={{ color: theme.textSec, fontSize: '0.85rem' }}>{chat.email}</span>
-                                        <button onClick={(e) => { e.stopPropagation(); handleCloseTicket(chat.id); }} style={{ background: isDark ? 'rgba(16,185,129,0.1)' : '#e8f5e9', color: '#10b981', border: `1px solid #10b98150`, padding: '6px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold' }}>
-                                            <IconCheck /> Resuelto
-                                        </button>
-                                    </div>
-                                    <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, padding: '15px', background: theme.card, borderRadius: '12px', border: `1px solid ${theme.border}` }}>
-                                        {chat.mensajes.map((m: any) => (
-                                            <div key={m.id} style={{ alignSelf: m.origen === 'admin' ? 'flex-end' : 'flex-start', background: m.origen === 'admin' ? theme.primary : theme.inputBg, color: m.origen === 'admin' ? (isDark ? '#000':'#fff') : theme.text, padding: '12px 16px', borderRadius: m.origen === 'admin' ? '16px 16px 4px 16px' : '16px 16px 16px 4px', maxWidth: '80%', fontSize: '0.9rem' }}>
-                                                {m.mensaje}
-                                                <div style={{ fontSize: '0.65rem', opacity: 0.6, marginTop: 6, textAlign: m.origen === 'admin' ? 'right' : 'left' }}>
-                                                    {new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 10 }}>
-                                        <input type="text" value={adminReplies[chat.id] || ""} onChange={(e) => setAdminReplies({ ...adminReplies, [chat.id]: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && handleAdminReply(chat.id)} placeholder="Responder..." style={inputStyle} />
-                                        <button onClick={() => handleAdminReply(chat.id)} style={{ background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', padding: '0 20px', borderRadius: '12px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-                                            <IconSend />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    ))
-                )}
+      {activeSubTab === 'notifications' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={cardStyle}>
+            <h3 style={{ margin: '0 0 15px 0' }}>Nueva Notificación</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+               <div><label style={{ fontSize: '0.7rem', fontWeight: 800, color: theme.textSec }}>Destinatario</label><select value={notifForm.userId} onChange={e => setNotifForm({...notifForm, userId: e.target.value})} style={inputStyle}><option value="all">Todos los usuarios</option>{profiles.map(p => <option key={p.id} value={p.id}>{p.nombre_completo}</option>)}</select></div>
+               <div><label style={{ fontSize: '0.7rem', fontWeight: 800, color: theme.textSec }}>Tipo Alerta</label><select value={notifForm.type} onChange={e => setNotifForm({...notifForm, type: e.target.value})} style={inputStyle}><option value="info">Info</option><option value="success">Éxito</option><option value="warning">Aviso</option><option value="error">Error</option></select></div>
             </div>
-        )}
+            <input type="text" value={notifForm.title} onChange={e => setNotifForm({...notifForm, title: e.target.value})} placeholder="Título de la notificación" style={inputStyle} />
+            <textarea value={notifForm.content} onChange={e => setNotifForm({...notifForm, content: e.target.value})} placeholder="Contenido del mensaje..." style={{ ...inputStyle, height: 80, resize: 'none' }} />
+            <button onClick={handleSendNotification} style={{ width: '100%', background: theme.primary, border: 'none', padding: 14, borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>Enviar Mensaje</button>
+          </div>
+          <div style={cardStyle}>
+             <h3 style={{ margin: '0 0 15px 0' }}>Historial de Notificaciones</h3>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+               {sentNotifications.map(n => (
+                 <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, background: theme.bg, borderRadius: 12, border: `1px solid ${theme.border}` }}>
+                   <div><div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{n.title}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{n.content}</div></div>
+                   <button onClick={() => deleteNotification(n.id)} style={{ color: '#ff4444', border: 'none', background: 'transparent', cursor: 'pointer' }}>Eliminar</button>
+                 </div>
+               ))}
+             </div>
+          </div>
+        </div>
+      )}
 
-        {/* NOTIFICACIONES APP */}
-        {activeSubTab === 'notifications' && (
-            <div style={glassStyle}>
-                <h3 style={{ margin: '0 0 20px 0', fontWeight: 900 }}>Enviar Notificación de Sistema</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20 }}>
-                    <div>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Destinatario</label>
-                        <select value={notifForm.userId} onChange={e => setNotifForm({...notifForm, userId: e.target.value})} style={inputStyle}>
-                            <option value="all">Todos los usuarios (Broadcast)</option>
-                            {profiles.map(p => <option key={p.id} value={p.id}>{p.nombre_completo} ({p.email})</option>)}
-                        </select>
-
-                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Título</label>
-                        <input type="text" value={notifForm.title} onChange={e => setNotifForm({...notifForm, title: e.target.value})} placeholder="Ej: Nueva función disponible" style={inputStyle} />
-                        
-                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Categoría / Importancia</label>
-                        <select value={notifForm.type} onChange={e => setNotifForm({...notifForm, type: e.target.value})} style={inputStyle}>
-                            <option value="info">💡 Informativa (Azul)</option>
-                            <option value="success">✅ Éxito / Regalo (Verde)</option>
-                            <option value="warning">⚠️ Advertencia (Amarillo)</option>
-                            <option value="error">🚨 Alerta Crítica (Rojo)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Mensaje Detallado</label>
-                        <textarea value={notifForm.content} onChange={e => setNotifForm({...notifForm, content: e.target.value})} placeholder="Escribe el contenido de la notificación aquí..." style={{ ...inputStyle, height: 140, resize: 'none' }} />
-                        
-                        <button onClick={handleSendNotification} style={{ width: '100%', background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', padding: '16px', borderRadius: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: `0 8px 20px ${theme.primary}40` }}>
-                            <IconSend /> Desplegar Notificación
-                        </button>
-                    </div>
-                </div>
+      {activeSubTab === 'news' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>Noticias en Landing</h3>
+            <button onClick={() => setIsAddingNews(!isAddingNews)} style={{ background: theme.primary, border: 'none', padding: '8px 16px', borderRadius: 12, fontWeight: 800, cursor: 'pointer' }}>{isAddingNews ? 'Cerrar' : '+ Nueva'}</button>
+          </div>
+          {isAddingNews && (
+            <div style={cardStyle}>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+                  <input type="text" value={newsForm.title} onChange={e => setNewsForm({...newsForm, title: e.target.value})} placeholder="Título" style={inputStyle} />
+                  <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} style={inputStyle}><option>Actualización</option><option>Tip Financiero</option></select>
+               </div>
+               <textarea value={newsForm.summary} onChange={e => setNewsForm({...newsForm, summary: e.target.value})} placeholder="Resumen corto..." style={{ ...inputStyle, height: 60 }} />
+               <textarea value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} placeholder="Detalle completo" style={{ ...inputStyle, height: 120 }} />
+               <button onClick={handleSaveNews} style={{ width: '100%', background: theme.primary, border: 'none', padding: 14, borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>Publicar Noticia</button>
             </div>
-        )}
-
-        {/* NOTICIAS LANDING */}
-        {activeSubTab === 'news' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                
-                {/* BOTÓN NUEVA NOTICIA */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0, fontWeight: 900 }}>Gestión de Boletín (Landing Page)</h3>
-                    <button onClick={() => setIsAddingNews(!isAddingNews)} style={{ background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-                       {isAddingNews ? 'Cancelar' : <><IconPlus /> Nueva Noticia</>}
-                    </button>
-                </div>
-
-                {isAddingNews && (
-                    <div style={{ ...glassStyle, border: `2px solid ${theme.primary}40` }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.5fr)', gap: 30 }}>
-                            <div className="news-inputs">
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Categoría</label>
-                                <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} style={inputStyle}>
-                                    <option value="Actualización">Actualización</option>
-                                    <option value="Tip Financiero">Tip Financiero</option>
-                                    <option value="Comunidad">Comunidad</option>
-                                    <option value="Evento">Evento</option>
-                                </select>
-
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Título Llamativo</label>
-                                <input type="text" value={newsForm.title} onChange={e => setNewsForm({...newsForm, title: e.target.value})} placeholder="Ej: ¡Ya puedes conectar tu banco!" style={inputStyle} />
-
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Resumen (Max 150 caracteres)</label>
-                                <textarea value={newsForm.summary} onChange={e => setNewsForm({...newsForm, summary: e.target.value})} maxLength={150} placeholder="Un texto corto para la tarjeta..." style={{ ...inputStyle, height: 80, resize: 'none' }} />
-                                
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Imagen URL (Opcional)</label>
-                                <input type="text" value={newsForm.image_url} onChange={e => setNewsForm({...newsForm, image_url: e.target.value})} placeholder="https://..." style={inputStyle} />
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, display: 'block', marginBottom: 8 }}>Contenido Extendido</label>
-                                <textarea value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} placeholder="Aquí va todo el detalle de la noticia..." style={{ ...inputStyle, height: 260, resize: 'none' }} />
-                                
-                                <div style={{ display: 'flex', gap: 12 }}>
-                                    <button onClick={handleSaveNews} style={{ flex: 1, background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', padding: '16px', borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>Publicar en Landing</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* LISTADO DE NOTICIAS */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-                    {newsList.map(item => (
-                        <div key={item.id} style={{ ...glassStyle, padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', color: theme.primary }}>{item.category}</span>
-                                <button onClick={() => deleteNews(item.id)} style={{ background: 'transparent', border: 'none', color: theme.danger, cursor: 'pointer', fontWeight: 800 }}>Eliminar</button>
-                            </div>
-                            <div style={{ fontWeight: 800, fontSize: '1.1rem' }}>{item.title}</div>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: theme.textSec, lineHeight: 1.5 }}>{item.summary}</p>
-                            <div style={{ fontSize: '0.7rem', color: theme.textSec, borderTop: `1px solid ${theme.border}`, paddingTop: 10, marginTop: 'auto' }}>
-                                {new Date(item.published_at).toLocaleDateString()}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )}
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 15 }}>
+            {newsList.map(item => (
+              <div key={item.id} style={cardStyle}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: theme.primary, fontWeight: 900, marginBottom: 8 }}><span>{item.category}</span><button onClick={() => deleteNews(item.id)} style={{ color: '#ff4444', border: 'none', background: 'transparent', cursor: 'pointer' }}>Borrar</button></div>
+                <div style={{ fontWeight: 'bold', marginBottom: 5 }}>{item.title}</div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: theme.textSec }}>{item.summary}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
