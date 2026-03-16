@@ -84,7 +84,7 @@ export default function CommsView() {
     
     if (notifForm.userId === 'all') {
       const inserts = profiles.map(p => ({
-        user_id: p.id,
+        usuario_id: p.id,
         title: notifForm.title,
         content: notifForm.content,
         type: notifForm.type
@@ -92,7 +92,7 @@ export default function CommsView() {
       await supabase.from('user_notifications').insert(inserts);
     } else {
       await supabase.from('user_notifications').insert({
-        user_id: notifForm.userId,
+        usuario_id: notifForm.userId,
         title: notifForm.title,
         content: notifForm.content,
         type: notifForm.type
