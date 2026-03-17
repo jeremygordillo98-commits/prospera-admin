@@ -49,6 +49,16 @@ export default function ControlView() {
     await supabase.from('perfiles').update({ [field]: newValue }).eq('id', userId);
   };
 
+  const getLoyaltyInfo = (u: any) => {
+    const created = new Date(u.creado_en).getTime();
+    const now = new Date().getTime();
+    const days = Math.floor((now - created) / (1000 * 60 * 60 * 24));
+    
+    if (days < 30) return { label: 'PRUEBA', color: '#3b82f6', bg: '#3b82f615', border: '#3b82f630', days };
+    if (days < 90) return { label: 'NIVEL ORO', color: '#f59e0b', bg: '#f59e0b15', border: '#f59e0b30', days };
+    return { label: 'PLATINO', color: '#10b981', bg: '#10b98115', border: '#10b98130', days };
+  };
+
   const getUserStatus = (u: any) => {
     const ultraCount = (u.permiso_chat ? 1 : 0) + (u.permiso_magic ? 1 : 0) + (u.permiso_insights ? 1 : 0) + (u.permiso_reporte_comparativo ? 1 : 0) + (u.permiso_reporte_calor ? 1 : 0);
     if (ultraCount > 0) return { label: `ULTRA`, color: '#c084fc', bg: '#c084fc20', border: '#c084fc40' }; 
@@ -243,6 +253,17 @@ export default function ControlView() {
                                 <div>
                                     <div style={{ fontWeight: 900, fontSize: '1.1rem', color: theme.text }}>{user.nombre_completo || '---'}</div>
                                     <div style={{ fontSize: '0.85rem', color: theme.textSec, marginTop: 4 }}>{user.email}</div>
+                                    <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.primary }}>{getLoyaltyInfo(user).days} días</span>
+                                        <span style={{ 
+                                            background: getLoyaltyInfo(user).bg, 
+                                            color: getLoyaltyInfo(user).color, 
+                                            border: `1px solid ${getLoyaltyInfo(user).border}`, 
+                                            padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900 
+                                        }}>
+                                            {getLoyaltyInfo(user).label}
+                                        </span>
+                                    </div>
                                 </div>
                                 <span style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900 }}>{status.label}</span>
                             </div>
@@ -267,6 +288,7 @@ export default function ControlView() {
                     <thead>
                         <tr style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${theme.border}` }}>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Perfil</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Días / Lealtad</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Nivel Actual</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Billing ($)</th>
@@ -279,6 +301,20 @@ export default function ControlView() {
                             return (
                                 <tr key={user.id} style={{ borderBottom: idx === filteredUsers.length -1 ? 'none' : `1px solid ${theme.border}`, transition: 'all 0.2s' }} className="admin-row">
                                     <td style={{ padding: '20px 24px', fontWeight: 800, fontSize: '0.95rem' }}>{user.nombre_completo || '---'}</td>
+                                    <td style={{ padding: '20px 24px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <div style={{ fontWeight: 900, fontSize: '1rem', color: theme.primary }}>{getLoyaltyInfo(user).days} días</div>
+                                            <span style={{ 
+                                                background: getLoyaltyInfo(user).bg, 
+                                                color: getLoyaltyInfo(user).color, 
+                                                border: `1px solid ${getLoyaltyInfo(user).border}`, 
+                                                padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900,
+                                                width: 'fit-content'
+                                            }}>
+                                                {getLoyaltyInfo(user).label}
+                                            </span>
+                                        </div>
+                                    </td>
                                     <td style={{ padding: '20px 24px', color: theme.textSec, fontSize: '0.85rem', fontWeight: 500 }}>{user.email}</td>
                                     <td style={{ padding: '20px 24px' }}>
                                         <span style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}`, padding: '6px 14px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 900 }}>{status.label}</span>
