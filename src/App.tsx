@@ -48,8 +48,10 @@ function PrivateRouting() {
   );
 }
 
+import { Session } from '@supabase/supabase-js';
+
 export default function App() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
 
   useEffect(() => {

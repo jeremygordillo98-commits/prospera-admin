@@ -11,9 +11,29 @@ const IconCalendar = () => <svg width="18" height="18" viewBox="0 0 24 24" fill=
 const IconEdit = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 const IconCheck = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>;
 
+export interface PerfilUsuario {
+  id?: string;
+  user_id?: string;
+  nombre_completo?: string;
+  creado_en?: string;
+  permiso_presupuestos?: boolean;
+  permiso_recordatorios?: boolean;
+  permiso_subcategorias?: boolean;
+  permiso_reporte_patrimonio?: boolean;
+  permiso_reporte_estado?: boolean;
+  permiso_reporte_flujo?: boolean;
+  permiso_conciliacion?: boolean;
+  permiso_reporte_comparativo?: boolean;
+  permiso_reporte_calor?: boolean;
+  permiso_chat?: boolean;
+  permiso_magic?: boolean;
+  permiso_insights?: boolean;
+  [key: string]: any;
+}
+
 export default function DashboardView() {
   const { theme, isDark } = useTheme();
-  const { precios: preciosDB, updatePrecios } = useData();
+  const { precios: preciosDB, updatePrecios, showToast } = useData();
   
   // --- ESTADO DE PRECIOS EDITABLE ---
   const [precios, setPrecios] = useState<PreciosConfig>(preciosDB);
@@ -23,7 +43,7 @@ export default function DashboardView() {
   }, [preciosDB]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [perfilesRaw, setPerfilesRaw] = useState<any[]>([]); 
+  const [perfilesRaw, setPerfilesRaw] = useState<PerfilUsuario[]>([]); 
   const [stats, setStats] = useState({ total: 0, ultra: 0, pro: 0, basico: 0, usersWithPending: 0, valorEstimado: 0 });
   const [plansData, setPlansData] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
@@ -45,24 +65,17 @@ export default function DashboardView() {
     }
   }, [precios]);
 
-  const calculateUserValue = (u: any, p: typeof precios) => {
+  const calculateUserValue = (u: PerfilUsuario, p: typeof precios) => {
     let total = 0;
-    if (u.permiso_presupuestos) total += p.presupuestos;
-    if (u.permiso_recordatorios) total += p.recordatorios;
-    if (u.permiso_subcategorias) total += p.subcategorias;
-    if (u.permiso_reporte_patrimonio) total += p.reporte_patrimonio;
-    if (u.permiso_reporte_estado) total += p.reporte_estado;
-    if (u.permiso_reporte_flujo) total += p.reporte_flujo;
-    if (u.permiso_conciliacion) total += p.conciliacion;
-    if (u.permiso_reporte_comparativo) total += p.reporte_comparativo;
-    if (u.permiso_reporte_calor) total += p.reporte_calor;
-    if (u.permiso_chat) total += p.chat;
-    if (u.permiso_magic) total += p.magic;
-    if (u.permiso_insights) total += p.insights;
+    (Object.keys(p) as Array<keyof PreciosConfig>).forEach(key => {
+        if (u[`permiso_${key}`]) {
+            total += p[key] || 0;
+        }
+    });
     return total;
   };
 
-  const calculateUserLevel = (u: any) => {
+  const calculateUserLevel = (u: PerfilUsuario) => {
     const ultraCount = (u.permiso_chat ? 1 : 0) + (u.permiso_magic ? 1 : 0) + (u.permiso_insights ? 1 : 0) + (u.permiso_reporte_comparativo ? 1 : 0) + (u.permiso_reporte_calor ? 1 : 0);
     if (ultraCount > 0) return 'ULTRA';
     const proCount = (u.permiso_conciliacion ? 1 : 0) + (u.permiso_subcategorias ? 1 : 0) + (u.permiso_reporte_patrimonio ? 1 : 0) + (u.permiso_reporte_estado ? 1 : 0) + (u.permiso_reporte_flujo ? 1 : 0);
@@ -70,7 +83,7 @@ export default function DashboardView() {
     return 'BÁSICO';
   };
 
-  const updateCalculations = (data: any[]) => {
+  const updateCalculations = (data: PerfilUsuario[]) => {
     let ultra = 0, pro = 0, basico = 0, valorTotal = 0;
     data.forEach(u => {
       const level = calculateUserLevel(u);
@@ -99,7 +112,10 @@ export default function DashboardView() {
       }
       setStats(prev => ({ ...prev, usersWithPending: uniqueUsersPending }));
       await fetchChartData();
-    } catch (error) { console.error("Error Dashboard:", error); } finally { setLoading(false); }
+    } catch (error: any) { 
+        console.error("Error Dashboard:", error); 
+        showToast(error?.message || "Error al conectar con la base de datos", "error");
+    } finally { setLoading(false); }
   }
 
   async function fetchChartData() {
