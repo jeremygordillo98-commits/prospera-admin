@@ -183,15 +183,15 @@ export default function DashboardView() {
     <div style={{ animation: 'fadeIn 0.5s ease', paddingBottom: '60px' }}>
       
       {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', marginBottom: '40px', flexDirection: isMobile ? 'column' : 'row', gap: '24px' }}>
+      <div className="flex flex-col md:flex-row justify-between md:items-center mb-10 gap-6">
         <div>
-            <h2 style={{ fontSize: isMobile ? '1.8rem' : '2.2rem', margin: 0, color: theme.text, fontWeight: 900, letterSpacing: '-1.5px' }}>Prospera Insights</h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 10px #10b981' }}></div>
-                <p style={{ margin: 0, color: theme.textSec, fontSize: '0.9rem', fontWeight: 600 }}>Sistemas Operativos • Real-time</p>
+            <h2 className="text-[1.8rem] md:text-[2.2rem] m-0 font-black tracking-[-1.5px]" style={{ color: theme.text }}>Prospera Insights</h2>
+            <div className="flex items-center gap-2 mt-1">
+                <div className="w-2 h-2 rounded-full shadow-[0_0_10px_#10b981]" style={{ background: '#10b981' }}></div>
+                <p className="m-0 text-[0.9rem] font-semibold" style={{ color: theme.textSec }}>Sistemas Operativos • Real-time</p>
             </div>
         </div>
-        <div style={{ display: 'flex', gap: '6px', background: theme.inputBg, padding: '6px', borderRadius: '16px', border: `1px solid ${theme.border}`, alignSelf: isMobile ? 'center' : 'auto' }}>
+        <div className="flex gap-1.5 p-1.5 rounded-2xl md:self-center self-stretch" style={{ background: theme.inputBg, border: `1px solid ${theme.border}` }}>
           {(['today', 'week', 'month', 'year'] as const).map((range) => (
             <button key={range} onClick={() => setTimeRange(range)} style={{ padding: '10px 18px', borderRadius: '12px', border: 'none', background: timeRange === range ? theme.primary : 'transparent', color: timeRange === range ? (isDark ? '#000' : '#fff') : theme.textSec, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, transition: 'all 0.2s' }}>
               {range === 'today' ? 'Hoy' : range === 'week' ? 'Semana' : range === 'month' ? 'Mes' : 'Año'}
@@ -203,36 +203,36 @@ export default function DashboardView() {
 
       {/* RANGO PERSONALIZADO */}
       {timeRange === 'custom' && (
-        <div style={{ marginBottom: '30px', display: 'flex', gap: '15px', flexDirection: isMobile ? 'column' : 'row', background: theme.card, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.primary}50` }}>
-          <div style={{flex: 1}}>
-            <label style={{display:'block', fontSize:'0.7rem', fontWeight:800, marginBottom:8, color:theme.textSec}}>FECHA INICIAL</label>
-            <input type="date" value={customRange.start} onChange={(e) => setCustomRange({...customRange, start: e.target.value})} style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '12px', borderRadius: '12px', width:'100%', boxSizing:'border-box', outline: 'none' }} />
+        <div className="mb-8 flex flex-col md:flex-row gap-4 p-5 rounded-3xl" style={{ background: theme.card, border: `1px solid ${theme.primary}50` }}>
+          <div className="flex-1">
+            <label className="block text-[0.7rem] font-extrabold mb-2" style={{color:theme.textSec}}>FECHA INICIAL</label>
+            <input type="date" value={customRange.start} onChange={(e) => setCustomRange({...customRange, start: e.target.value})} className="p-3 rounded-xl w-full box-border outline-none" style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}` }} />
           </div>
-          <div style={{flex: 1}}>
-            <label style={{display:'block', fontSize:'0.7rem', fontWeight:800, marginBottom:8, color:theme.textSec}}>FECHA FINAL</label>
-            <input type="date" value={customRange.end} onChange={(e) => setCustomRange({...customRange, end: e.target.value})} style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}`, padding: '12px', borderRadius: '12px', width:'100%', boxSizing:'border-box', outline: 'none' }} />
+          <div className="flex-1">
+            <label className="block text-[0.7rem] font-extrabold mb-2" style={{color:theme.textSec}}>FECHA FINAL</label>
+            <input type="date" value={customRange.end} onChange={(e) => setCustomRange({...customRange, end: e.target.value})} className="p-3 rounded-xl w-full box-border outline-none" style={{ background: theme.inputBg, color: theme.text, border: `1px solid ${theme.border}` }} />
           </div>
         </div>
       )}
 
       {/* TARJETAS KPI */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' }}>
-        <div style={kpiStyle(theme.primary)}><div style={{ color: theme.textSec, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Usuarios</div><div style={{ fontSize: '2.2rem', fontWeight: 900 }}>{loading ? '...' : stats.total}</div></div>
-        <div style={kpiStyle('#c084fc')}><div style={{ color: '#c084fc', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuarios Ultra</div><div style={{ fontSize: '2.2rem', fontWeight: 900 }}>{loading ? '...' : stats.ultra}</div></div>
-        <div style={kpiStyle('#10b981')}><div style={{ color: '#10b981', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Usuarios Pro</div><div style={{ fontSize: '2.2rem', fontWeight: 900 }}>{loading ? '...' : stats.pro}</div></div>
-        <div style={kpiStyle(theme.danger)}><div style={{ color: theme.danger, fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Soporte</div><div style={{ fontSize: '2.2rem', fontWeight: 900 }}>{loading ? '...' : stats.usersWithPending}</div></div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+        <div style={kpiStyle(theme.primary)}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: theme.textSec }}>Total Usuarios</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.total}</div></div>
+        <div style={kpiStyle('#c084fc')}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#c084fc' }}>Usuarios Ultra</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.ultra}</div></div>
+        <div style={kpiStyle('#10b981')}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#10b981' }}>Usuarios Pro</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.pro}</div></div>
+        <div style={kpiStyle(theme.danger)}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: theme.danger }}>Soporte</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.usersWithPending}</div></div>
       </div>
 
       {/* SECCIÓN DE VALORIZACIÓN */}
-      <div style={{ ...cardStyle, marginBottom: '30px', background: isDark ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05))', border: `2px solid ${theme.primary}40`, padding: '32px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isMobile ? 'column' : 'row', gap: '24px' }}>
+      <div className="mb-8 p-6 md:p-8 rounded-3xl" style={{ ...cardStyle, background: isDark ? 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1))' : 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05))', border: `2px solid ${theme.primary}40` }}>
+        <div className="flex flex-col md:flex-row justify-between md:items-center gap-6">
           <div>
-            <h4 style={{ margin: 0, color: theme.primary, fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>📊 Valorización del Ecosistema</h4>
-            <p style={{ margin: '8px 0 0 0', color: theme.textSec, fontSize: '0.9rem', fontWeight: 500 }}>Proyección basada en la configuración de servicios activa.</p>
+            <h4 className="m-0 text-lg md:text-xl font-black flex items-center gap-2.5" style={{ color: theme.primary }}>📊 Valorización del Ecosistema</h4>
+            <p className="mt-2 mb-0 text-[0.9rem] font-medium" style={{ color: theme.textSec }}>Proyección basada en la configuración de servicios activa.</p>
           </div>
-          <div style={{ textAlign: isMobile ? 'center' : 'right' }}>
-            <div style={{ fontSize: '0.8rem', color: theme.textSec, fontWeight: 800, letterSpacing: '1px' }}>VALOR POTENCIAL ESTIMADO</div>
-            <div style={{ fontSize: '3rem', fontWeight: 950, color: theme.text, letterSpacing: '-2px' }}>${loading ? '0.00' : stats.valorEstimado.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+          <div className="text-center md:text-right">
+            <div className="text-[0.8rem] font-extrabold tracking-wide" style={{ color: theme.textSec }}>VALOR POTENCIAL ESTIMADO</div>
+            <div className="text-4xl md:text-5xl font-black tracking-tighter" style={{ color: theme.text }}>${loading ? '0.00' : stats.valorEstimado.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
           </div>
         </div>
       </div>
@@ -252,11 +252,11 @@ export default function DashboardView() {
             </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '20px' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {/* BÁSICOS */}
           <div style={cardStyle}>
-            <div style={{ background: '#3b82f6', width: 40, height: 4, borderRadius: 2, marginBottom: 16 }}></div>
-            <h5 style={{ marginTop: 0, color: '#3b82f6', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Fase Iniciación</h5>
+            <div className="w-10 h-1 mb-4 rounded-full" style={{ background: '#3b82f6' }}></div>
+            <h5 className="mt-0 text-[0.8rem] font-extrabold uppercase tracking-wide" style={{ color: '#3b82f6' }}>Fase Iniciación</h5>
             {[
               { label: 'Presupuestos', key: 'presupuestos' },
               { label: 'Recordatorios', key: 'recordatorios' }
@@ -274,8 +274,8 @@ export default function DashboardView() {
 
           {/* PRO */}
           <div style={cardStyle}>
-            <div style={{ background: '#10b981', width: 40, height: 4, borderRadius: 2, marginBottom: 16 }}></div>
-            <h5 style={{ marginTop: 0, color: '#10b981', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Fase Analítica</h5>
+            <div className="w-10 h-1 mb-4 rounded-full" style={{ background: '#10b981' }}></div>
+            <h5 className="mt-0 text-[0.8rem] font-extrabold uppercase tracking-wide" style={{ color: '#10b981' }}>Fase Analítica</h5>
             {[
               { label: 'Conciliación', key: 'conciliacion' },
               { label: 'Subcategorías', key: 'subcategorias' },
@@ -294,8 +294,8 @@ export default function DashboardView() {
 
           {/* ULTRA */}
           <div style={cardStyle}>
-            <div style={{ background: '#c084fc', width: 40, height: 4, borderRadius: 2, marginBottom: 16 }}></div>
-            <h5 style={{ marginTop: 0, color: '#c084fc', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Fase Avanzada</h5>
+            <div className="w-10 h-1 mb-4 rounded-full" style={{ background: '#c084fc' }}></div>
+            <h5 className="mt-0 text-[0.8rem] font-extrabold uppercase tracking-wide" style={{ color: '#c084fc' }}>Fase Avanzada</h5>
             {[
               { label: 'IA Integral', key: 'chat' },
               { label: 'Ingreso Mágico', key: 'magic' },
@@ -315,9 +315,9 @@ export default function DashboardView() {
       </div>
 
       {/* GRÁFICOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.8fr 1fr', gap: '24px' }}>
-        <div style={{ ...cardStyle, height: '400px', display: 'flex', flexDirection: 'column' }}>
-          <h4 style={{ margin: '0 0 24px 0', fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-0.5px' }}>Adquisición de Usuarios</h4>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr] gap-6">
+        <div className="h-[400px] flex flex-col" style={cardStyle}>
+          <h4 className="mb-6 m-0 text-lg md:text-xl font-black tracking-tight">Adquisición de Usuarios</h4>
           <div style={{ flex: 1, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -331,8 +331,8 @@ export default function DashboardView() {
             </ResponsiveContainer>
           </div>
         </div>
-        <div style={{ ...cardStyle, height: '400px', display: 'flex', flexDirection: 'column' }}>
-          <h4 style={{ margin: '0 0 24px 0', fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-0.5px' }}>Mix de Suscripción</h4>
+        <div className="h-[400px] flex flex-col" style={cardStyle}>
+          <h4 className="mb-6 m-0 text-lg md:text-xl font-black tracking-tight">Mix de Suscripción</h4>
           <div style={{ flex: 1, minHeight: 0 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={plansData} layout="vertical" margin={{ left: -10, right: 30, top: 10, bottom: 10 }}>

@@ -35,24 +35,11 @@ export default function AdminLayout() {
   ];
 
   const getNavItemStyle = (isActive: boolean) => ({
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    width: '100%',
-    padding: '14px 20px',
     background: isActive 
       ? `linear-gradient(90deg, ${theme.primary}15 0%, transparent 100%)` 
       : 'transparent',
-    border: 'none',
     borderLeft: isActive ? `4px solid ${theme.primary}` : '4px solid transparent',
     color: isActive ? theme.primary : theme.textSec,
-    fontSize: '0.9rem',
-    fontWeight: isActive ? 800 : 600,
-    cursor: 'pointer',
-    textAlign: 'left' as const,
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    borderRadius: isMobile ? '0' : '0 12px 12px 0',
-    margin: isMobile ? '0' : '2px 0',
     opacity: isActive ? 1 : 0.7,
   });
 
@@ -61,94 +48,62 @@ export default function AdminLayout() {
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: isMobile ? 'column' : 'row', 
-      minHeight: '100vh', 
-      background: theme.bg, 
-      color: theme.text,
-      fontFamily: "'Inter', sans-serif"
-    }}>
+    <div 
+      className="flex flex-col lg:flex-row min-h-screen font-sans"
+      style={{ 
+        background: theme.bg, 
+        color: theme.text,
+      }}
+    >
       
       {/* SIDEBAR / HEADER */}
-      <aside style={{ 
-        width: isMobile ? '100%' : '260px',
-        background: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRight: isMobile ? 'none' : `1px solid ${theme.border}`,
-        borderBottom: isMobile ? `1px solid ${theme.border}` : 'none',
-        display: 'flex',
-        flexDirection: 'column',
-        position: isMobile ? 'sticky' : 'sticky',
-        top: 0,
-        height: isMobile ? 'auto' : '100vh',
-        zIndex: 1000,
-        flexShrink: 0,
-        boxShadow: isMobile ? '0 4px 20px rgba(0,0,0,0.05)' : 'none'
-      }}>
+      <aside 
+        className="w-full lg:w-[260px] flex flex-col sticky top-0 z-50 shrink-0 lg:h-screen lg:border-b-0 shadow-sm lg:shadow-none"
+        style={{ 
+          background: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRight: isMobile ? 'none' : `1px solid ${theme.border}`,
+          borderBottom: isMobile ? `1px solid ${theme.border}` : 'none',
+        }}
+      >
         
         {/* LOGO SECCIÓN */}
-        <div style={{ 
-          padding: isMobile ? '16px 20px' : '32px 24px', 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between'
-        }}>
-            <div style={{display: 'flex', alignItems: 'center', gap: 12}}>
-                <div style={{ 
-                  width: 36, height: 36, 
-                  borderRadius: '12px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
+        <div className="py-4 px-5 lg:py-8 lg:px-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div 
+                  className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden"
+                  style={{ 
+
                   boxShadow: `0 8px 16px ${theme.primary}40`,
-                  overflow: 'hidden'
                 }}>
-                  <img src="/admin-logo.png" alt="Admin" style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                  <img src="/admin-logo.png" alt="Admin" className="w-full h-full object-cover" />
                 </div>
-                <div style={{ fontWeight: 900, fontSize: '1.1rem', letterSpacing: '-0.5px' }}>
-                  PROSPERA <span style={{ color: theme.primary, fontSize: '0.65rem', verticalAlign: 'middle', background: theme.primary + '15', padding: '2px 8px', borderRadius: '20px', marginLeft: '6px', fontWeight: 800 }}>ROOT</span>
+                <div className="font-extrabold text-[1.1rem] tracking-tight">
+                  PROSPERA <span className="text-[0.65rem] align-middle px-2 py-0.5 rounded-full ml-1.5 font-extrabold" style={{ color: theme.primary, background: theme.primary + '15' }}>ROOT</span>
                 </div>
             </div>
 
             {isMobile && (
-                <button onClick={handleLogout} style={{ background: theme.danger + '15', border: 'none', color: theme.danger, width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                <button onClick={handleLogout} className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer border-none" style={{ background: theme.danger + '15', color: theme.danger }}>
                     <IconLogOut />
                 </button>
             )}
         </div>
 
         {/* NAVEGACIÓN */}
-        <nav style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: isMobile ? 'row' : 'column',
-          overflowX: isMobile ? 'auto' : 'visible',
-          padding: isMobile ? '0 10px 10px' : '10px 0',
-          gap: isMobile ? '8px' : '0',
-          scrollbarWidth: 'none'
-        }}>
+        <nav className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible px-2.5 pb-2.5 lg:px-0 lg:py-2.5 gap-2 lg:gap-0" style={{ scrollbarWidth: 'none' }}>
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
+              className={isMobile 
+                ? "flex flex-col items-center gap-1 p-2.5 border-none rounded-xl text-[0.7rem] font-extrabold flex-1 min-w-[80px] transition-all duration-200"
+                : "flex items-center gap-3 w-full py-3.5 px-5 border-none text-[0.9rem] cursor-pointer text-left transition-all duration-300 ease-out lg:rounded-r-xl lg:my-0.5 nav-item-admin"}
               style={isMobile ? {
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 5,
-                padding: '10px 15px',
                 background: activeTab === item.id ? theme.primary + '15' : 'transparent',
-                border: 'none',
-                borderRadius: '12px',
                 color: activeTab === item.id ? theme.primary : theme.textSec,
-                fontSize: '0.7rem',
-                fontWeight: 800,
-                flex: 1,
-                minWidth: '80px',
-                transition: 'all 0.2s'
-              } : getNavItemStyle(activeTab === item.id)}
+              } : { ...getNavItemStyle(activeTab === item.id), fontWeight: activeTab === item.id ? 800 : 600 }}
             >
               <div style={{ transform: activeTab === item.id ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.2s' }}>
                 {item.icon}
@@ -159,11 +114,11 @@ export default function AdminLayout() {
         </nav>
 
         {!isMobile && (
-          <div style={{ padding: '24px' }}>
-            <button onClick={handleLogout} style={{ width: '100%', background: theme.danger + '10', border: 'none', color: theme.danger, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', borderRadius: '14px', transition: 'all 0.2s' }} onMouseOver={(e) => e.currentTarget.style.background = `${theme.danger}20`} onMouseOut={(e) => e.currentTarget.style.background = `${theme.danger}10`}>
+          <div className="p-6">
+            <button onClick={handleLogout} className="w-full border-none flex items-center gap-3 py-3.5 px-4 text-[0.9rem] font-bold cursor-pointer rounded-xl transition-all duration-200" style={{ background: theme.danger + '10', color: theme.danger }} onMouseOver={(e) => e.currentTarget.style.background = `${theme.danger}20`} onMouseOut={(e) => e.currentTarget.style.background = `${theme.danger}10`}>
                 <IconLogOut /> Cerrar Sesión
             </button>
-            <div style={{ fontSize: '0.65rem', color: theme.textSec, textAlign: 'center', marginTop: 20, opacity: 0.5, fontWeight: 700, letterSpacing: '1px' }}>
+            <div className="text-[0.65rem] text-center mt-5 font-bold tracking-widest opacity-50" style={{ color: theme.textSec }}>
               ADMIN CORE v4.0
             </div>
           </div>
@@ -171,15 +126,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* CONTENIDO PRINCIPAL */}
-      <main style={{ 
-        flex: 1, 
-        padding: isMobile ? '24px 16px' : '40px 60px', 
-        overflowY: 'auto',
-        maxWidth: '1600px',
-        margin: '0 auto',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
+      <main className="flex-1 p-6 lg:p-10 lg:px-16 overflow-y-auto max-w-[1600px] mx-auto w-full box-border">
           <div style={{ animation: 'slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)' }}>
             {activeTab === 'dashboard' && <DashboardView />}
             {activeTab === 'control' && <ControlView />}
