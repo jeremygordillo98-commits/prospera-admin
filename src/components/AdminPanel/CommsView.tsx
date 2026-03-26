@@ -28,6 +28,10 @@ export default function CommsView() {
   const [isAddingNews, setIsAddingNews] = useState(false);
   const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
 
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
   useEffect(() => {
     fetchTickets();
     fetchProfiles();
@@ -117,11 +121,16 @@ export default function CommsView() {
     if (window.confirm("¿Eliminar esta noticia?")) await supabase.from('public_news').delete().eq('id', id);
   };
 
-  const chatsAgrupados = tickets.filter(t => t.estado === 'abierto').reduce((acc: any, t) => {
+  const chatsAgrupadosArray = Object.values(tickets.filter(t => t.estado === 'abierto').reduce((acc: any, t) => {
     if (!acc[t.usuario_id]) acc[t.usuario_id] = { id: t.usuario_id, nombre: t.perfiles?.nombre_completo, email: t.perfiles?.email, mensajes: [] };
     acc[t.usuario_id].mensajes.push(t);
     return acc;
-  }, {});
+  }, {}));
+
+  const filteredChats = chatsAgrupadosArray.filter((chat: any) => {
+    return (chat.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+           (chat.email || '').toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const tabStyle = (active: boolean) => ({
     padding: '12px 20px', background: active ? theme.primary : 'transparent', color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
@@ -130,6 +139,17 @@ export default function CommsView() {
 
   const inputStyle = { padding: '12px 16px', borderRadius: 12, border: `1px solid ${theme.border}`, background: theme.inputBg, color: theme.text, width: '100%', outline: 'none', fontSize: '0.9rem', marginBottom: 12 };
   const cardStyle = { background: theme.card, borderRadius: 20, border: `1px solid ${theme.border}`, padding: 24, boxShadow: '0 4px 20px rgba(0,0,0,0.02)' };
+
+  const filterSectionStyle = { 
+    background: isDark ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.6)', 
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    borderRadius: 24, 
+    border: `1px solid ${theme.border}`, 
+    padding: 20, 
+    marginBottom: 24, 
+    boxShadow: isDark ? '0 10px 30px rgba(0,0,0,0.2)' : '0 10px 30px rgba(0,0,0,0.03)' 
+  };
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
@@ -150,8 +170,8 @@ export default function CommsView() {
                 const found = profiles.find(p => p.email.toLowerCase() === userId.toLowerCase());
                 if (found) {
                   setExpandedChat(found.id);
-                  // Asegurar que aparezca en la lista aunque no tenga mensajes
-                  if (!chatsAgrupados[found.id]) {
+                  // Solo agregar si no existe ya en tickets (un poco hacky pero funcional para preventivo)
+                  if (!tickets.some(t => t.usuario_id === found.id)) {
                     setTickets(prev => [...prev, { 
                       id: 'temp-' + Date.now(), 
                       usuario_id: found.id, 
@@ -171,16 +191,36 @@ export default function CommsView() {
             </button>
           </div>
 
-          {Object.keys(chatsAgrupados).length === 0 ? (
+          {/* FILTRO DE SOPORTE */}
+          <div style={filterSectionStyle}>
+              <div onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
+                      Refina su búsqueda
+                  </h3>
+                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>▼</div>
+              </div>
+              
+              {showFilters && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20, marginTop: 20, paddingTop: 20, borderTop: `1px solid ${theme.border}` }}>
+                      <div>
+                          <label style={{display: 'block', fontSize: '0.75rem', color: theme.textSec, marginBottom: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px'}}>Nombre o Correo</label>
+                          <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Ej. Alex Rivera" style={{ ...inputStyle, marginBottom: 0 }} />
+                      </div>
+                  </div>
+              )}
+          </div>
+
+          {filteredChats.length === 0 ? (
             <div style={{ textAlign: 'center', color: theme.textSec, padding: '60px 20px', border: `2px dashed ${theme.border}`, borderRadius: 16, background: theme.card }}>
-              <h3>Bandeja Limpia</h3><p>No hay mensajes pendientes.</p>
+              <h3>Bandeja Limpia</h3><p>No hay mensajes que coincidan con su búsqueda.</p>
             </div>
-          ) : Object.values(chatsAgrupados).map((chat: any) => (
+          ) : filteredChats.map((chat: any) => (
             <div key={chat.id} style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
               <div onClick={() => setExpandedChat(expandedChat === chat.id ? null : chat.id)} style={{ padding: 16, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedChat === chat.id ? theme.accent : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ width: 40, height: 40, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{chat.nombre?.charAt(0).toUpperCase() || '?'}</div>
-                  <div><div style={{ fontWeight: 'bold' }}>{chat.nombre}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{chat.mensajes.filter((m:any) => !m.id.toString().startsWith('temp-')).length} mensajes históricos</div></div>
+                  <div><div style={{ fontWeight: 'bold' }}>{chat.nombre}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{chat.mensajes.filter((m:any) => m.id && m.id.toString && !m.id.toString().startsWith('temp-')).length} mensajes históricos</div></div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                    {chat.mensajes.some((m:any) => m.origen === 'usuario' && m.estado === 'abierto') && <div style={{ width: 10, height: 10, borderRadius: '50%', background: theme.primary }}></div>}
