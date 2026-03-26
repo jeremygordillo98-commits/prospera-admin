@@ -17,8 +17,9 @@ export const ContableManager = () => {
 
     const fetchAccountants = async () => {
         setLoading(true);
+        // Usamos la tabla 'perfiles' (plural) como aparece en tu Supabase
         const { data, error } = await supabaseContable
-            .from('perfiles_contables')
+            .from('perfiles')
             .select('*')
             .order('email');
         
@@ -32,7 +33,7 @@ export const ContableManager = () => {
 
     const updateLimit = async (userId: string, newLimit: number) => {
         const { error } = await supabaseContable
-            .from('perfiles_contables')
+            .from('perfiles')
             .update({ limite_empresas: newLimit })
             .eq('id', userId);
         
@@ -63,7 +64,7 @@ export const ContableManager = () => {
     };
 
     const filtered = accountants.filter(a => 
-        (a.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+        (a.nombre_completo?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
         (a.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
@@ -97,11 +98,11 @@ export const ContableManager = () => {
                         <div key={acc.id} style={cardStyle}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
                                 <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                                    {acc.email.charAt(0).toUpperCase()}
+                                    {acc.email?.charAt(0).toUpperCase() || '?'}
                                 </div>
                                 <div style={{ overflow: 'hidden' }}>
-                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{acc.nombre || 'Contador'}</div>
-                                    <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{acc.email}</div>
+                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{acc.nombre_completo || 'Contador'}</div>
+                                    <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{acc.email || 'Sin correo electrónico'}</div>
                                 </div>
                             </div>
 
