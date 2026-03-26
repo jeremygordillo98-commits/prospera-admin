@@ -32,6 +32,10 @@ export default function CommsView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Nuevo Chat Modal
+  const [isAddingChat, setIsAddingChat] = useState(false);
+  const [searchUserQuery, setSearchUserQuery] = useState('');
+
   useEffect(() => {
     fetchTickets();
     fetchProfiles();
@@ -164,27 +168,7 @@ export default function CommsView() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <h3 style={{ margin: 0 }}>Bandeja de Entrada</h3>
             <button 
-              onClick={() => {
-                const userId = window.prompt("Ingresa el correo del usuario para iniciar chat:");
-                if (!userId) return;
-                const found = profiles.find(p => p.email.toLowerCase() === userId.toLowerCase());
-                if (found) {
-                  setExpandedChat(found.id);
-                  // Solo agregar si no existe ya en tickets (un poco hacky pero funcional para preventivo)
-                  if (!tickets.some(t => t.usuario_id === found.id)) {
-                    setTickets(prev => [...prev, { 
-                      id: 'temp-' + Date.now(), 
-                      usuario_id: found.id, 
-                      mensaje: "Iniciando conversación...", 
-                      origen: 'admin', 
-                      estado: 'abierto',
-                      perfiles: { nombre_completo: found.nombre_completo, email: found.email }
-                    }]);
-                  }
-                } else {
-                  alert("Usuario no encontrado.");
-                }
-              }}
+              onClick={() => setIsAddingChat(true)}
               style={{ background: theme.primary, border: 'none', padding: '8px 16px', borderRadius: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
             >
               <IconPlus /> Nuevo Chat
@@ -301,6 +285,62 @@ export default function CommsView() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+      {/* MODAL NUEVO CHAT MODERNO */}
+      {isAddingChat && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20 }} onClick={() => setIsAddingChat(false)}>
+           <div style={{ ...cardStyle, width: '100%', maxWidth: 450, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+              <h3 style={{ marginTop: 0, marginBottom: 20 }}>Iniciar Conversación</h3>
+              <input 
+                type="text" 
+                autoFocus
+                value={searchUserQuery} 
+                onChange={e => setSearchUserQuery(e.target.value)} 
+                placeholder="Buscar por nombre o correo..." 
+                style={inputStyle} 
+              />
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                 {profiles
+                   .filter(p => !searchUserQuery || p.nombre_completo.toLowerCase().includes(searchUserQuery.toLowerCase()) || p.email.toLowerCase().includes(searchUserQuery.toLowerCase()))
+                   .slice(0, 50)
+                   .map(p => (
+                   <div 
+                     key={p.id} 
+                     onClick={() => {
+                        setExpandedChat(p.id);
+                        if (!tickets.some(t => t.usuario_id === p.id)) {
+                          setTickets(prev => [...prev, { 
+                            id: 'temp-' + Date.now(), 
+                            usuario_id: p.id, 
+                            mensaje: "Iniciando conversación...", 
+                            origen: 'admin', 
+                            estado: 'abierto',
+                            perfiles: { nombre_completo: p.nombre_completo, email: p.email }
+                          }]);
+                        }
+                        setIsAddingChat(false);
+                        setSearchUserQuery('');
+                     }}
+                     style={{ padding: 12, borderRadius: 12, border: `1px solid ${theme.border}`, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, transition: '0.2s' }}
+                     onMouseEnter={e => e.currentTarget.style.background = theme.accent}
+                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                   >
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{p.nombre_completo.charAt(0)}</div>
+                      <div style={{ overflow: 'hidden' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{p.nombre_completo}</div>
+                        <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{p.email}</div>
+                      </div>
+                   </div>
+                 ))}
+              </div>
+              <button 
+                onClick={() => setIsAddingChat(false)}
+                style={{ marginTop: 20, width: '100%', padding: 12, borderRadius: 12, background: theme.bg, border: `1px solid ${theme.border}`, color: theme.textSec, cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+           </div>
         </div>
       )}
     </div>
