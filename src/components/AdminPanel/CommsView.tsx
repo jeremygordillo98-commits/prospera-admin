@@ -141,6 +141,36 @@ export default function CommsView() {
 
       {activeSubTab === 'support' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h3 style={{ margin: 0 }}>Bandeja de Entrada</h3>
+            <button 
+              onClick={() => {
+                const userId = window.prompt("Ingresa el correo del usuario para iniciar chat:");
+                if (!userId) return;
+                const found = profiles.find(p => p.email.toLowerCase() === userId.toLowerCase());
+                if (found) {
+                  setExpandedChat(found.id);
+                  // Asegurar que aparezca en la lista aunque no tenga mensajes
+                  if (!chatsAgrupados[found.id]) {
+                    setTickets(prev => [...prev, { 
+                      id: 'temp-' + Date.now(), 
+                      usuario_id: found.id, 
+                      mensaje: "Iniciando conversación...", 
+                      origen: 'admin', 
+                      estado: 'abierto',
+                      perfiles: { nombre_completo: found.nombre_completo, email: found.email }
+                    }]);
+                  }
+                } else {
+                  alert("Usuario no encontrado.");
+                }
+              }}
+              style={{ background: theme.primary, border: 'none', padding: '8px 16px', borderRadius: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              <IconPlus /> Nuevo Chat
+            </button>
+          </div>
+
           {Object.keys(chatsAgrupados).length === 0 ? (
             <div style={{ textAlign: 'center', color: theme.textSec, padding: '60px 20px', border: `2px dashed ${theme.border}`, borderRadius: 16, background: theme.card }}>
               <h3>Bandeja Limpia</h3><p>No hay mensajes pendientes.</p>
@@ -149,10 +179,13 @@ export default function CommsView() {
             <div key={chat.id} style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
               <div onClick={() => setExpandedChat(expandedChat === chat.id ? null : chat.id)} style={{ padding: 16, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: expandedChat === chat.id ? theme.accent : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{chat.nombre.charAt(0).toUpperCase()}</div>
-                  <div><div style={{ fontWeight: 'bold' }}>{chat.nombre}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{chat.mensajes.length} mensajes recibidos</div></div>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>{chat.nombre?.charAt(0).toUpperCase() || '?'}</div>
+                  <div><div style={{ fontWeight: 'bold' }}>{chat.nombre}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{chat.mensajes.filter((m:any) => !m.id.toString().startsWith('temp-')).length} mensajes históricos</div></div>
                 </div>
-                <IconChevronDown />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                   {chat.mensajes.some((m:any) => m.origen === 'usuario' && m.estado === 'abierto') && <div style={{ width: 10, height: 10, borderRadius: '50%', background: theme.primary }}></div>}
+                   <IconChevronDown />
+                </div>
               </div>
               {expandedChat === chat.id && (
                 <div style={{ padding: 20, borderTop: `1px solid ${theme.border}`, background: theme.bg }}>
