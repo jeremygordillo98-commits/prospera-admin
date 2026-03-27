@@ -75,7 +75,12 @@ export default function CommsView() {
   };
 
   const fetchSentNotifications = async () => {
-    const { data } = await supabase.from('user_notifications').select('*').order('created_at', { ascending: false }).limit(20);
+    // Solo mostramos las que aún no han sido "vistas/cerradas" por el usuario (is_read: false)
+    const { data } = await supabase
+      .from('user_notifications')
+      .select('*, perfiles(nombre_completo)')
+      .eq('is_read', false)
+      .order('created_at', { ascending: false });
     if (data) setSentNotifications(data);
   };
 
@@ -246,12 +251,24 @@ export default function CommsView() {
             <button onClick={handleSendNotification} style={{ width: '100%', background: theme.primary, border: 'none', padding: 14, borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>Enviar Mensaje</button>
           </div>
           <div style={cardStyle}>
-             <h3 style={{ margin: '0 0 15px 0' }}>Historial de Notificaciones</h3>
+             <h3 style={{ margin: '0 0 15px 0' }}>Historial de Notificaciones (Pendientes)</h3>
              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                {sentNotifications.map(n => (
-                 <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, background: theme.bg, borderRadius: 12, border: `1px solid ${theme.border}` }}>
-                   <div><div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{n.title}</div><div style={{ fontSize: '0.75rem', color: theme.textSec }}>{n.content}</div></div>
-                   <button onClick={() => deleteNotification(n.id)} style={{ color: '#ff4444', border: 'none', background: 'transparent', cursor: 'pointer' }}>Eliminar</button>
+                 <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: theme.bg, borderRadius: 16, border: `1px solid ${theme.border}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 900, background: theme.primary + '20', color: theme.primary, padding: '2px 8px', borderRadius: '6px', textTransform: 'uppercase' }}>Enviado</span>
+                          <span style={{ fontSize: '0.75rem', color: theme.textSec, fontWeight: 700 }}>Para: {n.perfiles?.nombre_completo || 'Usuario'}</span>
+                      </div>
+                      <div style={{ fontWeight: 800, fontSize: '0.95rem', color: theme.text, marginBottom: 2 }}>{n.title}</div>
+                      <div style={{ fontSize: '0.85rem', color: theme.textSec, lineHeight: 1.4 }}>{n.content}</div>
+                    </div>
+                    <button 
+                      onClick={() => deleteNotification(n.id)} 
+                      style={{ background: '#ef444415', color: '#ef4444', border: '1px solid #ef444430', padding: '8px 12px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s' }}
+                    >
+                      Bajar
+                    </button>
                  </div>
                ))}
              </div>
