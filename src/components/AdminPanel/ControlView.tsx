@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
+import { supabasePymes } from '../../services/supabasePymes';
 import { useTheme } from '../../context/ThemeContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -29,8 +30,36 @@ export default function ControlView() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data, error } = await supabase.from('perfiles').select('*').order('creado_en', { ascending: false });
-    if (!error && data) setUsers(data);
+    try {
+      // 1. Usuarios de Prospera Finance (Main)
+      const { data: mainUsers, error: mainError } = await supabase
+        .from('perfiles')
+        .select('*')
+        .order('creado_en', { ascending: false });
+
+      // 2. Usuarios de Prospera Pymes
+      const { data: pymesUsers, error: pymesError } = await supabasePymes
+        .from('perfiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      let combined: any[] = [];
+      
+      if (!mainError && mainUsers) {
+        combined = [...combined, ...mainUsers.map(u => ({ ...u, project: 'Finance', displayDate: u.creado_en }))];
+      }
+      
+      if (!pymesError && pymesUsers) {
+        combined = [...combined, ...pymesUsers.map(u => ({ ...u, project: 'Pymes', displayDate: u.created_at }))];
+      }
+
+      // Ordenar por fecha globalmente desc
+      combined.sort((a, b) => new Date(b.displayDate).getTime() - new Date(a.displayDate).getTime());
+      
+      setUsers(combined);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+    }
     setLoading(false);
   };
 
@@ -80,9 +109,11 @@ export default function ControlView() {
     const data = filteredUsers.map(u => ({
       "Nombre Completo": u.nombre_completo || '---',
       "Correo Electrónico": u.email,
+      "Proyecto": u.project,
+      "RUC Profesional": u.ruc_profesional || '---',
       "Plan Actual": getUserStatus(u).label,
       "Pago Mensual ($)": (u.pago_mensual || 0).toFixed(2),
-      "Fecha de Registro": new Date(u.creado_en).toLocaleDateString()
+      "Fecha de Registro": new Date(u.displayDate).toLocaleDateString()
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -287,8 +318,8 @@ export default function ControlView() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: theme.text }}>
                     <thead>
                         <tr style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${theme.border}` }}>
-                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Perfil</th>
-                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Días / Lealtad</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Perfil / RUC</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Días / Proyecto</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Nivel Actual</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Billing ($)</th>
@@ -300,21 +331,24 @@ export default function ControlView() {
                             const status = getUserStatus(user);
                             return (
                                 <tr key={user.id} style={{ borderBottom: idx === filteredUsers.length -1 ? 'none' : `1px solid ${theme.border}`, transition: 'all 0.2s' }} className="admin-row">
-                                    <td style={{ padding: '20px 24px', fontWeight: 800, fontSize: '0.95rem' }}>{user.nombre_completo || '---'}</td>
+                                    <td style={{ padding: '20px 24px' }}>
+                                        <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>{user.nombre_completo || '---'}</div>
+                                        <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{user.ruc_profesional || 'Sin RUC'}</div>
+                                    </td>
                                     <td style={{ padding: '20px 24px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                            <div style={{ fontWeight: 900, fontSize: '1rem', color: theme.primary }}>{getLoyaltyInfo(user).days} días</div>
+                                            <div style={{ fontWeight: 900, fontSize: '1rem', color: user.project === 'Pymes' ? '#10b981' : theme.primary }}>{user.project}</div>
                                             <span style={{ 
-                                                background: getLoyaltyInfo(user).bg, 
-                                                color: getLoyaltyInfo(user).color, 
-                                                border: `1px solid ${getLoyaltyInfo(user).border}`, 
-                                                padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900,
-                                                width: 'fit-content'
-                                            }}>
-                                                {getLoyaltyInfo(user).label}
-                                            </span>
-                                        </div>
-                                    </td>
+                                                 background: getLoyaltyInfo(user).bg, 
+                                                 color: getLoyaltyInfo(user).color, 
+                                                 border: `1px solid ${getLoyaltyInfo(user).border}`, 
+                                                 padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900,
+                                                 width: 'fit-content'
+                                             }}>
+                                                 {getLoyaltyInfo(user).label}
+                                             </span>
+                                         </div>
+                                     </td>
                                     <td style={{ padding: '20px 24px', color: theme.textSec, fontSize: '0.85rem', fontWeight: 500 }}>{user.email}</td>
                                     <td style={{ padding: '20px 24px' }}>
                                         <span style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}`, padding: '6px 14px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 900 }}>{status.label}</span>
