@@ -75,13 +75,23 @@ export default function CommsView() {
   };
 
   const fetchSentNotifications = async () => {
-    // Solo mostramos las que aún no han sido "vistas/cerradas" por el usuario (is_read: false)
-    const { data } = await supabase
+    // 1. Obtener notificaciones donde is_read es falso (pendientes)
+    const { data: notifications } = await supabase
       .from('user_notifications')
-      .select('*, perfiles(nombre_completo)')
+      .select('*')
       .eq('is_read', false)
       .order('created_at', { ascending: false });
-    if (data) setSentNotifications(data);
+
+    // 2. Obtener nombres de perfiles para el cruce de datos
+    const { data: usersData } = await supabase.from('perfiles').select('id, nombre_completo');
+
+    if (notifications && usersData) {
+      // 3. Unir datos manualmente para evitar errores de falta de relación en la BD
+      setSentNotifications(notifications.map((n: any) => ({
+        ...n,
+        perfiles: { nombre_completo: usersData.find(u => u.id === n.user_id)?.nombre_completo || 'Usuario' }
+      })));
+    }
   };
 
   const handleAdminReply = async (usuarioId: string) => {
