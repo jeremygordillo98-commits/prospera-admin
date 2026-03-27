@@ -103,8 +103,8 @@ export default function DashboardView() {
     setLoading(true);
     try {
       const { data: perfiles } = await supabase.from('perfiles').select('*');
-      const { data: pendingTickets } = await supabase.from('soporte_tickets').select('user_id').eq('leido', false);
-      const uniqueUsersPending = new Set(pendingTickets?.map(t => t.user_id)).size;
+      const { data: pendingTickets } = await supabase.from('soporte_tickets').select('usuario_id').eq('estado', 'abierto');
+      const uniqueUsersPending = new Set(pendingTickets?.map(t => t.usuario_id)).size;
 
       if (perfiles) {
         setPerfilesRaw(perfiles);
