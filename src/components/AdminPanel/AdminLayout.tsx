@@ -22,7 +22,7 @@ const IconCalculator = () => <svg width="20" height="20" viewBox="0 0 24 24" fil
 
 export default function AdminLayout() {
   const { theme, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'contable' | 'reportes' | 'comms' | 'config'>('control');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'reportes' | 'comms' | 'config'>('control');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -35,7 +35,7 @@ export default function AdminLayout() {
   const menuItems = [
     { id: 'dashboard', label: 'Métricas', icon: <IconDashboard /> },
     { id: 'control', label: 'Usuarios', icon: <IconUsers /> },
-    { id: 'contable', label: 'Contable', icon: <IconCalculator /> },
+    { id: 'pymes', label: 'Pymes', icon: <IconCalculator /> },
     { id: 'reportes', label: 'Reportes', icon: <IconChart /> },
     { id: 'comms', label: 'Canales', icon: <IconMessage /> },
     { id: 'config', label: 'Sistema', icon: <IconSettings /> },
@@ -151,7 +151,7 @@ export default function AdminLayout() {
         <div style={{ animation: 'slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'control' && <ControlView />}
-          {activeTab === 'contable' && <ContableManager />}
+          {activeTab === 'pymes' && <ContableManager />}
           {activeTab === 'reportes' && <ReportsView />}
           {activeTab === 'comms' && <CommsView />}
           {activeTab === 'config' && <ConfigView />}

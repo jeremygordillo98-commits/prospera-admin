@@ -65,21 +65,22 @@ export const ContableManager = () => {
 
     const filtered = accountants.filter(a => 
         (a.nombre_completo?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
-        (a.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        (a.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (a.ruc_profesional?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
 
     return (
         <div style={{ animation: 'fadeIn 0.5s ease' }}>
             <div style={{ marginBottom: 32 }}>
-                <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Gestión Contable Root</h2>
-                <p style={{ color: theme.textSec, marginTop: 4 }}>Controles maestros para el módulo de Prospera Contable</p>
+                <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Gestión de Usuarios Pymes</h2>
+                <p style={{ color: theme.textSec, marginTop: 4 }}>Control maestro de perfiles contables para el módulo Prospera Pymes</p>
             </div>
 
             <div style={{ ...cardStyle, display: 'flex', gap: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
                 <input 
                     type="text" 
-                    placeholder="Filtrar contadores por nombre o email..." 
+                    placeholder="Filtrar por nombre, email o RUC..." 
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     style={{ ...inputStyle, flex: 1, border: 'none' }}
@@ -101,8 +102,9 @@ export const ContableManager = () => {
                                     {acc.email?.charAt(0).toUpperCase() || '?'}
                                 </div>
                                 <div style={{ overflow: 'hidden' }}>
-                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{acc.nombre_completo || 'Contador'}</div>
-                                    <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{acc.email || 'Sin correo electrónico'}</div>
+                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{acc.nombre_completo || 'Sin Nombre'}</div>
+                                    <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{acc.email}</div>
+                                    <div style={{ fontSize: '0.75rem', color: theme.primary, fontWeight: 700, marginTop: 4 }}>RUC: {acc.ruc_profesional || '---'}</div>
                                 </div>
                             </div>
 
