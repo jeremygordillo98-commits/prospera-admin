@@ -18,6 +18,8 @@ export const ContableManager = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
 
+    const [counts, setCounts] = useState<any>({});
+
     useEffect(() => {
         checkSession();
     }, []);
@@ -54,25 +56,60 @@ export const ContableManager = () => {
         const { data, error: fetchError } = await supabaseContable
             .from('perfiles')
             .select('*')
-            .order('email');
+            .order('nombre_completo');
         
         if (!fetchError && data) {
             setAccountants(data);
+            fetchUsageCounts(data);
         } else {
             console.error("Error cargando contadores:", fetchError);
         }
         setLoading(false);
     };
 
+    const fetchUsageCounts = async (list: any[]) => {
+        const newCounts: any = {};
+        for (const acc of list) {
+            const { count } = await supabaseContable
+                .from('empresas_gestionadas')
+                .select('*', { count: 'exact', head: true })
+                .eq('id_usuario', acc.id_usuario);
+            newCounts[acc.id_usuario] = count || 0;
+        }
+        setCounts(newCounts);
+    };
+
+    const updateField = async (userId: string, field: string, value: any) => {
+        const { error: updateError } = await supabaseContable
+            .from('perfiles')
+            .update({ [field]: value })
+            .eq('id_usuario', userId);
+        
+        if (!updateError) {
+            setAccountants(prev => prev.map(a => a.id_usuario === userId ? { ...a, [field]: value } : a));
+        } else {
+            alert("❌ Error actualizando " + field + ": " + updateError.message);
+        }
+    };
+
+    const handleResetPassword = async (email: string) => {
+        const { error: resetError } = await supabaseContable.auth.resetPasswordForEmail(email);
+        if (!resetError) {
+            alert("📩 Correo de restauración enviado a: " + email);
+        } else {
+            alert("❌ Error: " + resetError.message);
+        }
+    };
+
     const updateLimit = async (userId: string, newLimit: number) => {
         const { error: updateError } = await supabaseContable
             .from('perfiles')
             .update({ limite_empresas: newLimit })
-            .eq('id', userId);
+            .eq('id_usuario', userId);
         
         if (!updateError) {
-            setAccountants(accountants.map(a => a.id === userId ? { ...a, limite_empresas: newLimit } : a));
-            alert("✅ Límite actualizado!");
+            setAccountants(accountants.map(a => a.id_usuario === userId ? { ...a, limite_empresas: newLimit } : a));
+            alert("✅ Límite de empresas actualizado!");
         } else {
             alert("❌ Error: " + updateError.message);
         }
@@ -105,6 +142,7 @@ export const ContableManager = () => {
 
     const filtered = accountants.filter(a => 
         (a.nombre_completo?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+        (a.razon_social?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
         (a.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
         (a.ruc_profesional?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
@@ -193,7 +231,7 @@ export const ContableManager = () => {
                 <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
                 <input 
                     type="text" 
-                    placeholder="Filtrar por nombre, email o RUC..." 
+                    placeholder="Filtrar por nombre, Razón Social, email o RUC..." 
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
                     style={{ ...inputStyle, flex: 1, border: 'none' }}
@@ -207,44 +245,105 @@ export const ContableManager = () => {
                     <p style={{ color: theme.textSec, fontWeight: 800 }}>No se encontraron perfiles contables registrados.</p>
                 </div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-                    {filtered.map(acc => (
-                        <div key={acc.id} style={cardStyle}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                                <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                                    {acc.email?.charAt(0).toUpperCase() || '?'}
-                                </div>
-                                <div style={{ overflow: 'hidden' }}>
-                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{acc.nombre_completo || 'Sin Nombre'}</div>
-                                    <div style={{ fontSize: '0.8rem', color: theme.textSec }}>{acc.email}</div>
-                                    <div style={{ fontSize: '0.75rem', color: theme.primary, fontWeight: 700, marginTop: 4 }}>RUC: {acc.ruc_profesional || '---'}</div>
-                                </div>
-                            </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 20 }}>
+                    {filtered.map(acc => {
+                        const usage = counts[acc.id_usuario] || 0;
+                        const limit = acc.limite_empresas || 1;
+                        const price = acc.precio_por_cliente || 0;
+                        const totalActual = usage * price;
+                        const totalProyectado = limit * price;
 
-                            <div style={{ background: theme.bg, padding: 20, borderRadius: 16, border: `1px solid ${theme.border}` }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem', fontWeight: 800 }}>
-                                        <IconBriefcase /> Cupo de Clientes
+                        return (
+                            <div key={acc.id_usuario} style={cardStyle}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                                    <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                                        {acc.email?.charAt(0).toUpperCase() || '?'}
                                     </div>
-                                    <span style={{ background: theme.primary, color: '#000', padding: '4px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 950 }}>
-                                        {acc.limite_empresas || 1}
-                                    </span>
+                                    <div style={{ flex: 1, overflow: 'hidden' }}>
+                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>NOMBRE COMPLETO</label>
+                                        <input 
+                                            defaultValue={acc.nombre_completo || 'Sin Nombre'}
+                                            onBlur={e => { if(e.target.value !== acc.nombre_completo) updateField(acc.id_usuario, 'nombre_completo', e.target.value) }}
+                                            style={{ ...inputStyle, width: '100%', fontWeight: 900, fontSize: '1.05rem' }}
+                                        />
+                                        <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
+                                    </div>
+                                    <button 
+                                        onClick={() => handleResetPassword(acc.email)}
+                                        title="Restablecer Contraseña"
+                                        style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer' }}
+                                    >
+                                        <Lock size={16} />
+                                    </button>
                                 </div>
-                                
-                                <label style={{ display: 'block', fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 5, textTransform: 'uppercase' }}>Ajsutar capacidad</label>
-                                <input 
-                                    type="number" 
-                                    min="1"
-                                    defaultValue={acc.limite_empresas || 1}
-                                    onBlur={e => {
-                                        const val = parseInt(e.target.value);
-                                        if (val !== acc.limite_empresas) updateLimit(acc.id, val);
-                                    }}
-                                    style={{ ...inputStyle, width: '100%', fontSize: '1rem', fontWeight: 800 }}
-                                />
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RAZÓN SOCIAL</label>
+                                        <input 
+                                            defaultValue={acc.razon_social || ''}
+                                            placeholder="Nombre comercial..."
+                                            onBlur={e => { if(e.target.value !== acc.razon_social) updateField(acc.id_usuario, 'razon_social', e.target.value) }}
+                                            style={{ ...inputStyle, width: '100%' }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RUC</label>
+                                        <input 
+                                            defaultValue={acc.ruc_profesional || ''}
+                                            onBlur={e => { if(e.target.value !== acc.ruc_profesional) updateField(acc.id_usuario, 'ruc_profesional', e.target.value) }}
+                                            style={{ ...inputStyle, width: '100%' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div style={{ background: theme.bg, padding: 16, borderRadius: 16, border: `1px solid ${theme.border}` }}>
+                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>REGLA DE COBRO ($)</label>
+                                            <input 
+                                                type="number"
+                                                defaultValue={acc.precio_por_cliente || 0}
+                                                onBlur={e => {
+                                                    const val = parseFloat(e.target.value);
+                                                    if (val !== acc.precio_por_cliente) updateField(acc.id_usuario, 'precio_por_cliente', val);
+                                                }}
+                                                style={{ ...inputStyle, width: '100%', fontWeight: 800, color: theme.primary }}
+                                            />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>CUPO MÁXIMO</label>
+                                            <input 
+                                                type="number"
+                                                defaultValue={limit}
+                                                onBlur={e => {
+                                                    const val = parseInt(e.target.value);
+                                                    if (val !== limit) updateField(acc.id_usuario, 'limite_empresas', val);
+                                                }}
+                                                style={{ ...inputStyle, width: '100%', fontWeight: 800 }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${theme.border}`, fontSize: '0.85rem' }}>
+                                        <span style={{ color: theme.textSec }}>Clientes en uso:</span>
+                                        <span style={{ fontWeight: 800, color: usage > limit ? theme.danger : theme.text }}>{usage} / {limit}</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 900, fontSize: '0.9rem' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ACTUAL</span>
+                                            <span style={{ color: theme.primary }}>${totalActual.toFixed(2)}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                                            <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ESPERADO</span>
+                                            <span style={{ color: theme.textSec }}>${totalProyectado.toFixed(2)}</span>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
         </div>
