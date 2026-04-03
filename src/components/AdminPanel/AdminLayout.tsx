@@ -22,7 +22,13 @@ const IconCalculator = () => <svg width="20" height="20" viewBox="0 0 24 24" fil
 
 export default function AdminLayout() {
   const { theme, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'reportes' | 'comms' | 'config'>('control');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'reportes' | 'comms' | 'config'>(() => {
+    return (localStorage.getItem('admin_active_tab') as any) || 'control';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('admin_active_tab', activeTab);
+  }, [activeTab]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [isCollapsed, setIsCollapsed] = useState(false);
 

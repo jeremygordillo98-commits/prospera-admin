@@ -2,18 +2,21 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
-import "./index.css"; // <--- ¡ESTA ES LA LÍNEA MÁGICAA! 🦈
+import "./index.css"; 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Removed Vercel Analytics import
+const queryClient = new QueryClient();
 
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-      
-      {/* Removed Analytics Component */}
-      
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+        
+        {/* Removed Analytics Component */}
+        
+      </BrowserRouter>
+    </QueryClientProvider>
   </React.StrictMode>
 );

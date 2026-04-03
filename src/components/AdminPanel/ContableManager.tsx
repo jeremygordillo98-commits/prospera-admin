@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabaseContable } from '../../services/supabaseContable';
 import { useTheme } from '../../context/ThemeContext';
 import { Lock, Mail, Loader2, LogOut, ChevronRight } from 'lucide-react';
@@ -28,7 +29,6 @@ export const ContableManager = () => {
         setAuthLoading(true);
         const { data: { session: currentSession } } = await supabaseContable.auth.getSession();
         setSession(currentSession);
-        if (currentSession) fetchAccountants();
         setAuthLoading(false);
     };
 
@@ -43,7 +43,6 @@ export const ContableManager = () => {
             });
             if (loginError) throw loginError;
             setSession(data.session);
-            fetchAccountants();
         } catch (err: any) {
             setError(err.message === 'Invalid login credentials' ? 'Credenciales de Pymes inválidas.' : err.message);
         } finally {
@@ -51,33 +50,39 @@ export const ContableManager = () => {
         }
     };
 
-    const fetchAccountants = async () => {
-        setLoading(true);
-        const { data, error: fetchError } = await supabaseContable
-            .from('perfiles')
-            .select('*')
-            .order('nombre_completo');
-        
-        if (!fetchError && data) {
-            setAccountants(data);
-            fetchUsageCounts(data);
-        } else {
-            console.error("Error cargando contadores:", fetchError);
-        }
-        setLoading(false);
-    };
+    const { data: queryData, isLoading: isFetchingAcc } = useQuery({
+        queryKey: ['accountantsData'],
+        enabled: !!session,
+        queryFn: async () => {
+            const { data, error: fetchError } = await supabaseContable
+                .from('perfiles')
+                .select('*')
+                .order('nombre_completo');
+            if (fetchError) throw fetchError;
 
-    const fetchUsageCounts = async (list: any[]) => {
-        const newCounts: any = {};
-        for (const acc of list) {
-            const { count } = await supabaseContable
-                .from('empresas_gestionadas')
-                .select('*', { count: 'exact', head: true })
-                .eq('id_usuario', acc.id_usuario);
-            newCounts[acc.id_usuario] = count || 0;
+            const profiles = data || [];
+            const newCounts: any = {};
+            for (const acc of profiles) {
+                const { count } = await supabaseContable
+                    .from('empresas_gestionadas')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('id_usuario', acc.id_usuario);
+                newCounts[acc.id_usuario] = count || 0;
+            }
+            return { profiles, counts: newCounts };
         }
-        setCounts(newCounts);
-    };
+    });
+
+    useEffect(() => {
+        if (queryData) {
+            setAccountants(queryData.profiles);
+            setCounts(queryData.counts);
+        }
+    }, [queryData]);
+
+    useEffect(() => {
+        setLoading(isFetchingAcc);
+    }, [isFetchingAcc]);
 
     const updateField = async (userId: string, field: string, value: any) => {
         const { error: updateError } = await supabaseContable

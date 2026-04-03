@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -36,63 +37,72 @@ export default function CommsView() {
   const [isAddingChat, setIsAddingChat] = useState(false);
   const [searchUserQuery, setSearchUserQuery] = useState('');
 
-  useEffect(() => {
-    fetchTickets();
-    fetchProfiles();
-    fetchNews();
-    fetchSentNotifications();
+  const queryClient = useQueryClient();
 
-    const ticketSub = supabase.channel('soporte_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'soporte_tickets' }, () => fetchTickets()).subscribe();
-    const newsSub = supabase.channel('news_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'public_news' }, () => fetchNews()).subscribe();
-    const notifSub = supabase.channel('notif_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications' }, () => fetchSentNotifications()).subscribe();
+  const { data: fetchedTickets } = useQuery({
+    queryKey: ['tickets'],
+    queryFn: async () => {
+      const { data: ticketsData, error: tErr } = await supabase.from('soporte_tickets').select('*').order('created_at', { ascending: true });
+      if (tErr) throw tErr;
+      const { data: usersData, error: uErr } = await supabase.from('perfiles').select('id, nombre_completo, email');
+      if (uErr) throw uErr;
+      
+      return ticketsData.map((t: any) => {
+        const user = usersData?.find(u => u.id === t.usuario_id);
+        return { ...t, perfiles: { nombre_completo: user?.nombre_completo || 'Usuario', email: user?.email || '' } };
+      });
+    }
+  });
+
+  const { data: fetchedProfiles } = useQuery({
+    queryKey: ['profilesComms'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('perfiles').select('id, nombre_completo, email').order('nombre_completo');
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: fetchedNews } = useQuery({
+    queryKey: ['news'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('public_news').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  const { data: fetchedSentNotifications } = useQuery({
+    queryKey: ['sentNotifications'],
+    queryFn: async () => {
+      const { data: notifications, error: err1 } = await supabase.from('user_notifications').select('*').eq('is_read', false).order('created_at', { ascending: false });
+      if (err1) throw err1;
+      const { data: usersData, error: err2 } = await supabase.from('perfiles').select('id, nombre_completo');
+      if (err2) throw err2;
+      
+      return (notifications || []).map((n: any) => ({
+        ...n,
+        perfiles: { nombre_completo: usersData?.find(u => u.id === n.user_id)?.nombre_completo || 'Usuario' }
+      }));
+    }
+  });
+
+  useEffect(() => { if (fetchedTickets) setTickets(fetchedTickets); }, [fetchedTickets]);
+  useEffect(() => { if (fetchedProfiles) setProfiles(fetchedProfiles); }, [fetchedProfiles]);
+  useEffect(() => { if (fetchedNews) setNewsList(fetchedNews); }, [fetchedNews]);
+  useEffect(() => { if (fetchedSentNotifications) setSentNotifications(fetchedSentNotifications); }, [fetchedSentNotifications]);
+
+  useEffect(() => {
+    const ticketSub = supabase.channel('soporte_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'soporte_tickets' }, () => queryClient.invalidateQueries({queryKey: ['tickets']})).subscribe();
+    const newsSub = supabase.channel('news_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'public_news' }, () => queryClient.invalidateQueries({queryKey: ['news']})).subscribe();
+    const notifSub = supabase.channel('notif_admin').on('postgres_changes', { event: '*', schema: 'public', table: 'user_notifications' }, () => queryClient.invalidateQueries({queryKey: ['sentNotifications']})).subscribe();
 
     return () => { 
       supabase.removeChannel(ticketSub); 
       supabase.removeChannel(newsSub);
       supabase.removeChannel(notifSub);
     };
-  }, []);
-
-  const fetchTickets = async () => {
-    const { data: ticketsData } = await supabase.from('soporte_tickets').select('*').order('created_at', { ascending: true });
-    const { data: usersData } = await supabase.from('perfiles').select('id, nombre_completo, email');
-    if (ticketsData && usersData) {
-      setTickets(ticketsData.map((t: any) => {
-        const user = usersData.find(u => u.id === t.usuario_id);
-        return { ...t, perfiles: { nombre_completo: user?.nombre_completo || 'Usuario', email: user?.email || '' } };
-      }));
-    }
-  };
-
-  const fetchProfiles = async () => {
-    const { data } = await supabase.from('perfiles').select('id, nombre_completo, email').order('nombre_completo');
-    if (data) setProfiles(data);
-  };
-
-  const fetchNews = async () => {
-    const { data } = await supabase.from('public_news').select('*').order('created_at', { ascending: false });
-    if (data) setNewsList(data);
-  };
-
-  const fetchSentNotifications = async () => {
-    // 1. Obtener notificaciones donde is_read es falso (pendientes)
-    const { data: notifications } = await supabase
-      .from('user_notifications')
-      .select('*')
-      .eq('is_read', false)
-      .order('created_at', { ascending: false });
-
-    // 2. Obtener nombres de perfiles para el cruce de datos
-    const { data: usersData } = await supabase.from('perfiles').select('id, nombre_completo');
-
-    if (notifications && usersData) {
-      // 3. Unir datos manualmente para evitar errores de falta de relación en la BD
-      setSentNotifications(notifications.map((n: any) => ({
-        ...n,
-        perfiles: { nombre_completo: usersData.find(u => u.id === n.user_id)?.nombre_completo || 'Usuario' }
-      })));
-    }
-  };
+  }, [queryClient]);
 
   const handleAdminReply = async (usuarioId: string) => {
     const respuesta = adminReplies[usuarioId];
@@ -104,7 +114,7 @@ export default function CommsView() {
   const handleCloseTicket = async (usuarioId: string) => {
     if (window.confirm("¿Marcar conversación como resuelta?")) {
       await supabase.from('soporte_tickets').update({ estado: 'resuelto' }).eq('usuario_id', usuarioId);
-      fetchTickets();
+      queryClient.invalidateQueries({queryKey: ['tickets']});
     }
   };
 

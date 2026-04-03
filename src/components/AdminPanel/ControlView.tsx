@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import jsPDF from 'jspdf';
@@ -12,7 +13,6 @@ const IconSettings = () => <svg width="18" height="18" viewBox="0 0 24 24" fill=
 export default function ControlView() {
   const { theme, isDark } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   
   const [showFilters, setShowFilters] = useState(false);
@@ -20,19 +20,26 @@ export default function ControlView() {
   const [planFilter, setPlanFilter] = useState('todos');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  const { data: fetchedUsers, isLoading: loading } = useQuery({
+    queryKey: ['usuariosAdmin'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('perfiles').select('*').order('creado_en', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    fetchUsers();
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    const { data, error } = await supabase.from('perfiles').select('*').order('creado_en', { ascending: false });
-    if (!error && data) setUsers(data);
-    setLoading(false);
-  };
+  useEffect(() => {
+    if (fetchedUsers) {
+      setUsers(fetchedUsers);
+    }
+  }, [fetchedUsers]);
 
   const handleResetPassword = async (email: string) => {
     if (window.confirm(`⚠️ ¿Enviar correo de restablecimiento a ${email}?`)) {

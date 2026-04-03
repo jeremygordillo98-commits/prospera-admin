@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../context/ThemeContext';
 import { useData, PreciosConfig } from '../../context/DataContext';
 import { supabase } from '../../services/supabase';
@@ -47,23 +48,81 @@ export default function DashboardView() {
   const [stats, setStats] = useState({ total: 0, ultra: 0, pro: 0, basico: 0, usersWithPending: 0, valorEstimado: 0 });
   const [plansData, setPlansData] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [timeRange, setTimeRange] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('week');
   const [customRange, setCustomRange] = useState({ start: '', end: '' });
 
+  const { data: perfilesQuery, isLoading: loadingPerfiles } = useQuery({
+    queryKey: ['perfiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('perfiles').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: ticketsQuery } = useQuery({
+    queryKey: ['ticketsPendientes'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('soporte_tickets').select('usuario_id').eq('estado', 'abierto');
+      if (error) throw error;
+      return new Set(data?.map(t => t.usuario_id)).size;
+    }
+  });
+
+  const { data: chartQuery, isLoading: loadingCharts } = useQuery({
+    queryKey: ['chartData', timeRange, customRange],
+    queryFn: async () => {
+      let startDate = new Date();
+      if (timeRange === 'today') startDate.setHours(0,0,0,0);
+      else if (timeRange === 'week') startDate.setDate(startDate.getDate() - 7);
+      else if (timeRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
+      else if (timeRange === 'year') startDate.setFullYear(startDate.getFullYear() - 1);
+      else if (timeRange === 'custom' && customRange.start) { startDate = new Date(customRange.start); startDate.setHours(0,0,0,0); }
+
+      let query = supabase.from('perfiles').select('creado_en').gte('creado_en', startDate.toISOString());
+      if (timeRange === 'custom' && customRange.end) {
+          const endDate = new Date(customRange.end);
+          endDate.setHours(23,59,59,999);
+          query = query.lte('creado_en', endDate.toISOString());
+      }
+      const { data, error } = await query.order('creado_en', { ascending: true });
+      if (error) throw error;
+      const grouped = data?.reduce((acc: any, curr: any) => {
+        const date = new Date(curr.creado_en).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        acc[date] = (acc[date] || 0) + 1;
+        return acc;
+      }, {});
+      return Object.keys(grouped || {}).map(key => ({ name: key, usuarios: grouped[key] }));
+    }
+  });
+
+  const loading = loadingPerfiles || loadingCharts;
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
-    fetchDashboardData();
     return () => window.removeEventListener('resize', handleResize);
-  }, [timeRange, customRange]);
+  }, []);
 
   useEffect(() => {
-    if (perfilesRaw.length > 0) {
-      updateCalculations(perfilesRaw);
+    if (perfilesQuery) {
+      setPerfilesRaw(perfilesQuery);
+      updateCalculations(perfilesQuery);
     }
-  }, [precios]);
+  }, [perfilesQuery, precios]); 
+
+  useEffect(() => {
+    if (ticketsQuery !== undefined) {
+      setStats(prev => ({ ...prev, usersWithPending: ticketsQuery }));
+    }
+  }, [ticketsQuery]);
+
+  useEffect(() => {
+    if (chartQuery) {
+      setChartData(chartQuery);
+    }
+  }, [chartQuery]);
 
   const calculateUserValue = (u: PerfilUsuario, p: typeof precios) => {
     let total = 0;
@@ -99,47 +158,7 @@ export default function DashboardView() {
     ]);
   };
 
-  async function fetchDashboardData() {
-    setLoading(true);
-    try {
-      const { data: perfiles } = await supabase.from('perfiles').select('*');
-      const { data: pendingTickets } = await supabase.from('soporte_tickets').select('usuario_id').eq('estado', 'abierto');
-      const uniqueUsersPending = new Set(pendingTickets?.map(t => t.usuario_id)).size;
 
-      if (perfiles) {
-        setPerfilesRaw(perfiles);
-        updateCalculations(perfiles);
-      }
-      setStats(prev => ({ ...prev, usersWithPending: uniqueUsersPending }));
-      await fetchChartData();
-    } catch (error: any) { 
-        console.error("Error Dashboard:", error); 
-        showToast(error?.message || "Error al conectar con la base de datos", "error");
-    } finally { setLoading(false); }
-  }
-
-  async function fetchChartData() {
-    let startDate = new Date();
-    if (timeRange === 'today') startDate.setHours(0,0,0,0);
-    else if (timeRange === 'week') startDate.setDate(startDate.getDate() - 7);
-    else if (timeRange === 'month') startDate.setMonth(startDate.getMonth() - 1);
-    else if (timeRange === 'year') startDate.setFullYear(startDate.getFullYear() - 1);
-    else if (timeRange === 'custom' && customRange.start) { startDate = new Date(customRange.start); startDate.setHours(0,0,0,0); }
-
-    let query = supabase.from('perfiles').select('creado_en').gte('creado_en', startDate.toISOString());
-    if (timeRange === 'custom' && customRange.end) {
-        const endDate = new Date(customRange.end);
-        endDate.setHours(23,59,59,999);
-        query = query.lte('creado_en', endDate.toISOString());
-    }
-    const { data } = await query.order('creado_en', { ascending: true });
-    const grouped = data?.reduce((acc: any, curr: any) => {
-      const date = new Date(curr.creado_en).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
-      acc[date] = (acc[date] || 0) + 1;
-      return acc;
-    }, {});
-    setChartData(Object.keys(grouped || {}).map(key => ({ name: key, usuarios: grouped[key] })));
-  }
 
   const handlePrecioChange = (key: keyof PreciosConfig, value: string) => {
     setPrecios(prev => ({ ...prev, [key]: parseFloat(value) || 0 }));

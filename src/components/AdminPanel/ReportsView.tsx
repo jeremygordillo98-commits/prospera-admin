@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabase';
 import { 
@@ -8,7 +9,6 @@ import {
 
 export default function ReportsView() {
   const { theme, isDark } = useTheme();
-  const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any[]>([]);
   const [precios] = useState({ 
     ia: 3.0, // Precio agrupado para módulos IA (Chat, Magic, Insights)
@@ -16,16 +16,18 @@ export default function ReportsView() {
     base: 0.1 
   });
 
-  useEffect(() => {
-    fetchReportData();
-  }, []);
+  const { data: fetchedData, isLoading: loading } = useQuery({
+    queryKey: ['reportData'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('perfiles').select('*');
+      if (error) throw error;
+      return data || [];
+    }
+  });
 
-  async function fetchReportData() {
-    setLoading(true);
-    const { data: perfiles } = await supabase.from('perfiles').select('*');
-    if (perfiles) setData(perfiles);
-    setLoading(false);
-  }
+  useEffect(() => {
+    if (fetchedData) setData(fetchedData);
+  }, [fetchedData]);
 
   // --- 1. LÓGICA DE SALUD FINANCIERA (MRR & ARPU) ---
   const financialStats = useMemo(() => {
