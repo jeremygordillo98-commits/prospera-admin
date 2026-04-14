@@ -339,7 +339,7 @@ export default function CommsView() {
               />
               <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
                  {profiles
-                   .filter(p => !searchUserQuery || p.nombre_completo.toLowerCase().includes(searchUserQuery.toLowerCase()) || p.email.toLowerCase().includes(searchUserQuery.toLowerCase()))
+                   .filter(p => !searchUserQuery || (p.nombre_completo || '').toLowerCase().includes(searchUserQuery.toLowerCase()) || (p.email || '').toLowerCase().includes(searchUserQuery.toLowerCase()))
                    .slice(0, 50)
                    .map(p => (
                    <div 
@@ -363,10 +363,10 @@ export default function CommsView() {
                      onMouseEnter={e => e.currentTarget.style.background = theme.accent}
                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                    >
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{p.nombre_completo.charAt(0)}</div>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.primary, color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 'bold' }}>{(p.nombre_completo || '?').charAt(0).toUpperCase()}</div>
                       <div style={{ overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{p.nombre_completo}</div>
-                        <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{p.email}</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.9rem', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{p.nombre_completo || 'Usuario Sin Nombre'}</div>
+                        <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{p.email || 'Sin correo asociado'}</div>
                       </div>
                    </div>
                  ))}
