@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
@@ -9,6 +11,7 @@ const IconPlus = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="non
 const IconChevronDown = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 const IconBell = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>;
 const IconGlobe = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
+const IconEdit = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 
 export default function CommsView() {
   const { theme, isDark } = useTheme();
@@ -27,7 +30,10 @@ export default function CommsView() {
   // Noticias Landing
   const [newsList, setNewsList] = useState<any[]>([]);
   const [isAddingNews, setIsAddingNews] = useState(false);
-  const [newsForm, setNewsForm] = useState({ title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+  const [newsFilter, setNewsFilter] = useState('Todas');
+  const [newsForm, setNewsForm] = useState({ id: '', title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+
+  const categories = ["Actualización", "Tip Financiero", "Aviso Importante", "Nueva Funcionalidad"];
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -138,12 +144,32 @@ export default function CommsView() {
 
   const handleSaveNews = async () => {
     if (!newsForm.title || !newsForm.content) return alert("Completa título y contenido");
-    const { error } = await supabase.from('public_news').insert([{ ...newsForm, published_at: new Date() }]);
+    let error;
+    if (newsForm.id) {
+      const { error: err } = await supabase.from('public_news').update({ 
+        title: newsForm.title, 
+        summary: newsForm.summary, 
+        content: newsForm.content, 
+        category: newsForm.category, 
+        image_url: newsForm.image_url, 
+        is_published: newsForm.is_published 
+      }).eq('id', newsForm.id);
+      error = err;
+    } else {
+      const { error: err } = await supabase.from('public_news').insert([{ ...newsForm, id: undefined, published_at: new Date() }]);
+      error = err;
+    }
+    
     if (!error) {
-      alert("Noticia publicada!");
+      alert(newsForm.id ? "Noticia actualizada!" : "Noticia publicada!");
       setIsAddingNews(false);
-      setNewsForm({ title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
-    } else alert("Error al publicar");
+      setNewsForm({ id: '', title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+    } else alert("Error al guardar");
+  };
+
+  const editNews = (item: any) => {
+    setNewsForm(item);
+    setIsAddingNews(true);
   };
 
   const deleteNews = async (id: string) => {
@@ -160,6 +186,8 @@ export default function CommsView() {
     return (chat.nombre || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
            (chat.email || '').toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  const filteredNewsList = newsList.filter(n => newsFilter === 'Todas' || n.category === newsFilter);
 
   const tabStyle = (active: boolean) => ({
     padding: '12px 20px', background: active ? theme.primary : 'transparent', color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
@@ -300,25 +328,62 @@ export default function CommsView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Noticias en Landing</h3>
-            <button onClick={() => setIsAddingNews(!isAddingNews)} style={{ background: theme.primary, border: 'none', padding: '8px 16px', borderRadius: 12, fontWeight: 800, cursor: 'pointer' }}>{isAddingNews ? 'Cerrar' : '+ Nueva'}</button>
+            <div style={{ display: 'flex', gap: 12 }}>
+               <select 
+                 value={newsFilter} 
+                 onChange={e => setNewsFilter(e.target.value)} 
+                 style={{ ...inputStyle, marginBottom: 0, width: 'auto', fontSize: '0.75rem', padding: '8px 12px' }}
+               >
+                 <option>Todas</option>
+                 {categories.map(c => <option key={c}>{c}</option>)}
+               </select>
+               <button onClick={() => {
+                 setNewsForm({ id: '', title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+                 setIsAddingNews(!isAddingNews);
+               }} style={{ background: theme.primary, border: 'none', padding: '8px 16px', borderRadius: 12, fontWeight: 800, cursor: 'pointer' }}>
+                 {isAddingNews ? 'Cerrar' : '+ Nueva'}
+               </button>
+            </div>
           </div>
           {isAddingNews && (
-            <div style={cardStyle}>
+            <div style={cardStyle} className="animate-in slide-in-from-top duration-300">
+               <h4 style={{marginTop: 0, marginBottom: 15, color: theme.primary}}>{newsForm.id ? 'Editando Noticia' : 'Nueva Noticia'}</h4>
                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
                   <input type="text" value={newsForm.title} onChange={e => setNewsForm({...newsForm, title: e.target.value})} placeholder="Título" style={inputStyle} />
-                  <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} style={inputStyle}><option>Actualización</option><option>Tip Financiero</option></select>
+                  <select value={newsForm.category} onChange={e => setNewsForm({...newsForm, category: e.target.value})} style={inputStyle}>
+                    {categories.map(c => <option key={c}>{c}</option>)}
+                  </select>
                </div>
-               <textarea value={newsForm.summary} onChange={e => setNewsForm({...newsForm, summary: e.target.value})} placeholder="Resumen corto..." style={{ ...inputStyle, height: 60 }} />
-               <textarea value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} placeholder="Detalle completo" style={{ ...inputStyle, height: 120 }} />
-               <button onClick={handleSaveNews} style={{ width: '100%', background: theme.primary, border: 'none', padding: 14, borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>Publicar Noticia</button>
+               <input type="text" value={newsForm.image_url} onChange={e => setNewsForm({...newsForm, image_url: e.target.value})} placeholder="URL de la imagen (opcional)" style={inputStyle} />
+               <textarea value={newsForm.summary} onChange={e => setNewsForm({...newsForm, summary: e.target.value})} placeholder="Resumen corto (aparece en la tarjeta)..." style={{ ...inputStyle, height: 60 }} />
+               <textarea value={newsForm.content} onChange={e => setNewsForm({...newsForm, content: e.target.value})} placeholder="Contenido completo de la noticia..." style={{ ...inputStyle, height: 120 }} />
+               <div style={{display: 'flex', gap: 12}}>
+                  <button onClick={handleSaveNews} style={{ flex: 2, background: theme.primary, border: 'none', padding: 14, borderRadius: 12, fontWeight: 900, cursor: 'pointer' }}>
+                    {newsForm.id ? 'Guardar Cambios' : 'Publicar Noticia'}
+                  </button>
+                  {newsForm.id && (
+                    <button onClick={() => {
+                      setIsAddingNews(false);
+                      setNewsForm({ id: '', title: '', summary: '', content: '', category: 'Actualización', image_url: '', is_published: true });
+                    }} style={{ flex: 1, background: 'transparent', border: `1px solid ${theme.border}`, color: theme.textSec, borderRadius: 12, fontWeight: 800, cursor: 'pointer' }}>
+                      Cancelar
+                    </button>
+                  )}
+               </div>
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 15 }}>
-            {newsList.map(item => (
-              <div key={item.id} style={cardStyle}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: theme.primary, fontWeight: 900, marginBottom: 8 }}><span>{item.category}</span><button onClick={() => deleteNews(item.id)} style={{ color: '#ff4444', border: 'none', background: 'transparent', cursor: 'pointer' }}>Borrar</button></div>
-                <div style={{ fontWeight: 'bold', marginBottom: 5 }}>{item.title}</div>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: theme.textSec }}>{item.summary}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 15 }}>
+            {filteredNewsList.map(item => (
+              <div key={item.id} style={{ ...cardStyle, position: 'relative' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: theme.primary, fontWeight: 900, marginBottom: 8 }}>
+                   <span>{item.category}</span>
+                   <div style={{ display: 'flex', gap: 10 }}>
+                      <button onClick={() => editNews(item)} style={{ color: theme.textSec, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><IconEdit /> Editar</button>
+                      <button onClick={() => deleteNews(item.id)} style={{ color: '#ff4444', border: 'none', background: 'transparent', cursor: 'pointer' }}>Borrar</button>
+                   </div>
+                </div>
+                <div style={{ fontWeight: 'bold', marginBottom: 5, color: theme.text }}>{item.title}</div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: theme.textSec, lineClamp: 3, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.summary}</p>
               </div>
             ))}
           </div>
@@ -326,7 +391,7 @@ export default function CommsView() {
       )}
       {/* MODAL NUEVO CHAT MODERNO */}
       {isAddingChat && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20 }} onClick={() => setIsAddingChat(false)}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', zIndex: 1200, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 20 }} onClick={() => setIsAddingChat(false)}>
            <div style={{ ...cardStyle, width: '100%', maxWidth: 450, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
               <h3 style={{ marginTop: 0, marginBottom: 20 }}>Iniciar Conversación</h3>
               <input 
