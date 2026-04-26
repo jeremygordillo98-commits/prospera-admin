@@ -156,7 +156,8 @@ export default function CommsView() {
       }).eq('id', newsForm.id);
       error = err;
     } else {
-      const { error: err } = await supabase.from('public_news').insert([{ ...newsForm, id: undefined, published_at: new Date() }]);
+      const { id, ...dataToInsert } = newsForm;
+      const { error: err } = await supabase.from('public_news').insert([{ ...dataToInsert, published_at: new Date() }]);
       error = err;
     }
     

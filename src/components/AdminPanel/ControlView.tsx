@@ -87,6 +87,8 @@ export default function ControlView() {
     const data = filteredUsers.map(u => ({
       "Nombre Completo": u.nombre_completo || '---',
       "Correo Electrónico": u.email,
+      "País": u.pais || '---',
+      "Celular": u.celular || '---',
       "Plan Actual": getUserStatus(u).label,
       "Pago Mensual ($)": (u.pago_mensual || 0).toFixed(2),
       "Fecha de Registro": new Date(u.creado_en).toLocaleDateString()
@@ -99,6 +101,8 @@ export default function ControlView() {
     const wscols = [
       {wch: 30}, // Nombre
       {wch: 35}, // Email
+      {wch: 15}, // Pais
+      {wch: 15}, // Celular
       {wch: 15}, // Plan
       {wch: 18}, // Pago
       {wch: 20}  // Registro
@@ -259,7 +263,17 @@ export default function ControlView() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
                                 <div>
                                     <div style={{ fontWeight: 900, fontSize: '1.1rem', color: theme.text }}>{user.nombre_completo || '---'}</div>
-                                    <div style={{ fontSize: '0.85rem', color: theme.textSec, marginTop: 4 }}>{user.email}</div>
+                                    <div style={{ fontSize: '0.85rem', color: theme.textSec, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        {user.email}
+                                        {user.pais && <span style={{ background: theme.primary+'20', color: theme.primary, padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 800 }}>{user.pais}</span>}
+                                    </div>
+                                    {user.celular && (
+                                        <div style={{ marginTop: 6 }}>
+                                            <a href={`https://wa.me/${user.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#25D36615', color: '#25D366', padding: '4px 8px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 800 }}>
+                                                💬 Escribir al {user.celular}
+                                            </a>
+                                        </div>
+                                    )}
                                     <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
                                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.primary }}>{getLoyaltyInfo(user).days} días</span>
                                         <span style={{ 
@@ -296,7 +310,7 @@ export default function ControlView() {
                         <tr style={{ background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', borderBottom: `1px solid ${theme.border}` }}>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Perfil</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Días / Lealtad</th>
-                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales / Contacto</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Nivel Actual</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Billing ($)</th>
                             <th style={{ padding: '20px 24px', textAlign: 'right', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Acceso</th>
@@ -322,7 +336,19 @@ export default function ControlView() {
                                             </span>
                                         </div>
                                     </td>
-                                    <td style={{ padding: '20px 24px', color: theme.textSec, fontSize: '0.85rem', fontWeight: 500 }}>{user.email}</td>
+                                    <td style={{ padding: '20px 24px', color: theme.textSec, fontSize: '0.85rem', fontWeight: 500 }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                {user.email}
+                                                {user.pais && <span style={{ background: theme.primary+'20', color: theme.primary, padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 800 }}>{user.pais}</span>}
+                                            </div>
+                                            {user.celular && (
+                                                <a href={`https://wa.me/${user.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#25D36615', color: '#25D366', padding: '4px 8px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 800, width: 'fit-content', transition: 'all 0.2s' }} className="hover-scale">
+                                                    💬 {user.celular}
+                                                </a>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td style={{ padding: '20px 24px' }}>
                                         <span style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}`, padding: '6px 14px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: 900 }}>{status.label}</span>
                                     </td>
