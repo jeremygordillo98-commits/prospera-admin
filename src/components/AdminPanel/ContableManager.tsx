@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabaseContable } from '../../services/supabaseContable';
+import { supabaseContable, supabaseContableAdmin } from '../../services/supabaseContable';
 import { useTheme } from '../../context/ThemeContext';
-import { Lock, Mail, Loader2, LogOut, ChevronRight } from 'lucide-react';
+import { Lock, Mail, Loader2, LogOut, ChevronRight, Eye } from 'lucide-react';
 
 const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
 
@@ -98,11 +98,35 @@ export const ContableManager = () => {
     };
 
     const handleResetPassword = async (email: string) => {
-        const { error: resetError } = await supabaseContable.auth.resetPasswordForEmail(email);
-        if (!resetError) {
-            alert("📩 Correo de restauración enviado a: " + email);
-        } else {
-            alert("❌ Error: " + resetError.message);
+        if (window.confirm(`⚠️ ¿Enviar correo de restablecimiento a ${email}?`)) {
+            const { error } = await supabaseContable.auth.resetPasswordForEmail(email, { redirectTo: 'https://prospera-pymes.vercel.app/profile' });
+            if (error) alert('❌ Error: ' + error.message);
+            else alert('✅ Correo enviado a ' + email);
+        }
+    };
+
+    const handleImpersonate = async (email: string) => {
+        if (!supabaseContableAdmin) {
+            alert('❌ Falla de configuración: No se encontró la clave SERVICE_ROLE en las variables de entorno de Admin.');
+            return;
+        }
+        
+        try {
+            const { data, error } = await supabaseContableAdmin.auth.admin.generateLink({
+                type: 'magiclink',
+                email: email
+            });
+
+            if (error) throw error;
+            if (data?.properties?.action_link) {
+                if (window.confirm(`🎭 ¿Abrir Pymes impersonando a ${email}? \n\n⚠️ PRECAUCIÓN: Tendrás acceso total a su cuenta. Cualquier cambio que hagas afectará su información real.`)) {
+                    window.open(data.properties.action_link, '_blank');
+                }
+            } else {
+                throw new Error('No se generó el enlace.');
+            }
+        } catch (err: any) {
+            alert('❌ Error al generar link de impersonación: ' + err.message);
         }
     };
 
@@ -273,13 +297,22 @@ export const ContableManager = () => {
                                         />
                                         <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
                                     </div>
-                                    <button 
-                                        onClick={() => handleResetPassword(acc.email)}
-                                        title="Restablecer Contraseña"
-                                        style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer' }}
-                                    >
-                                        <Lock size={16} />
-                                    </button>
+                                    <div style={{ display: 'flex', gap: 6 }}>
+                                        <button 
+                                            onClick={() => handleResetPassword(acc.email)}
+                                            title="Restablecer Contraseña"
+                                            style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <Lock size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleImpersonate(acc.email)}
+                                            title="Ver como Usuario"
+                                            style={{ background: '#8b5cf615', color: '#8b5cf6', border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <Eye size={16} />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
