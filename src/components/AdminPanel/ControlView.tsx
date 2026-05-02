@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { supabase, supabaseAdmin } from '../../services/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 // --- ÍCONOS SVG ---
 const IconKey = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>;
 const IconSettings = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
+const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
 
 export default function ControlView() {
   const { theme, isDark } = useTheme();
@@ -46,6 +47,31 @@ export default function ControlView() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: 'https://prospera-finanzas.vercel.app/profile' });
       if (error) alert('❌ Error: ' + error.message);
       else alert('✅ Correo enviado a ' + email);
+    }
+  };
+
+  const handleImpersonate = async (email: string) => {
+    if (!supabaseAdmin) {
+        alert('❌ Falla de configuración: No se encontró la clave SERVICE_ROLE en las variables de entorno para Prospera App.');
+        return;
+    }
+    
+    try {
+        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'magiclink',
+            email: email
+        });
+
+        if (error) throw error;
+        if (data?.properties?.action_link) {
+            if (window.confirm(`🎭 ¿Abrir App impersonando a ${email}? \n\n⚠️ PRECAUCIÓN: Cualquier cambio que hagas afectará sus presupuestos y transacciones reales.`)) {
+                window.open(data.properties.action_link, '_blank');
+            }
+        } else {
+            throw new Error('No se generó el enlace.');
+        }
+    } catch (err: any) {
+        alert('❌ Error al generar link de impersonación: ' + err.message);
     }
   };
 
@@ -295,8 +321,9 @@ export default function ControlView() {
                                     <div style={{ fontWeight: 900, fontSize: '1.1rem', color: theme.text }}>${(user.pago_mensual || 0).toFixed(2)}</div>
                                 </div>
                                 <div style={{ display: 'flex', gap: 8 }}>
-                                    <button onClick={() => handleResetPassword(user.email)} style={{ background: theme.danger + '15', border: 'none', color: theme.danger, width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><IconKey /></button>
-                                    <button onClick={() => setSelectedUser(user)} style={{ background: theme.primary, border: 'none', color: isDark ? '#000' : '#fff', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${theme.primary}40` }}><IconSettings /></button>
+                                    <button onClick={() => handleResetPassword(user.email)} style={{ background: theme.danger + '15', border: 'none', color: theme.danger, width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Resetear Clave"><IconKey /></button>
+                                    <button onClick={() => handleImpersonate(user.email)} style={{ background: '#8b5cf615', border: 'none', color: '#8b5cf6', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Ver como Usuario"><IconEye /></button>
+                                    <button onClick={() => setSelectedUser(user)} style={{ background: theme.primary, border: 'none', color: isDark ? '#000' : '#fff', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${theme.primary}40` }} title="Permisos"><IconSettings /></button>
                                 </div>
                             </div>
                         </div>
@@ -371,8 +398,11 @@ export default function ControlView() {
                                     </td>
                                     <td style={{ padding: '20px 24px', textAlign: 'right' }}>
                                         <div style={{display: 'flex', gap: 10, justifyContent: 'flex-end'}}>
-                                            <button onClick={() => handleResetPassword(user.email)} style={{ background: 'transparent', border: `1px solid ${theme.danger}40`, color: theme.danger, width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-scale" title="Resetear">
+                                            <button onClick={() => handleResetPassword(user.email)} style={{ background: 'transparent', border: `1px solid ${theme.danger}40`, color: theme.danger, width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-scale" title="Resetear Clave">
                                                 <IconKey />
+                                            </button>
+                                            <button onClick={() => handleImpersonate(user.email)} style={{ background: '#8b5cf615', border: 'none', color: '#8b5cf6', width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-scale" title="Ver como Usuario">
+                                                <IconEye />
                                             </button>
                                             <button onClick={() => setSelectedUser(user)} style={{ background: theme.primary, border: 'none', color: isDark ? '#000' : '#fff', width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: `0 4px 12px ${theme.primary}30` }} className="hover-scale" title="Permisos">
                                                 <IconSettings />
