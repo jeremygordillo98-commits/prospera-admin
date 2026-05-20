@@ -7,6 +7,7 @@ import DashboardView from './DashboardView';
 import ReportsView from './ReportsView';
 import ConfigView from "./SysConfig";
 import { ContableManager } from './ContableManager';
+import CrmView from './CrmView';
 
 // --- ÍCONOS SVG PREMIUM ---
 const IconDashboard = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" /></svg>;
@@ -19,10 +20,11 @@ const IconChevronLeft = () => <svg width="18" height="18" viewBox="0 0 24 24" fi
 const IconChevronRight = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>;
 
 const IconCalculator = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="16" y1="14" x2="16" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>;
+const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
 
 export default function AdminLayout() {
   const { theme, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'reportes' | 'comms' | 'config'>(() => {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'crm' | 'reportes' | 'comms' | 'config'>(() => {
     return (localStorage.getItem('admin_active_tab') as any) || 'control';
   });
 
@@ -42,6 +44,7 @@ export default function AdminLayout() {
     { id: 'dashboard', label: 'Métricas', icon: <IconDashboard /> },
     { id: 'control', label: 'Usuarios', icon: <IconUsers /> },
     { id: 'pymes', label: 'Pymes', icon: <IconCalculator /> },
+    { id: 'crm', label: 'Ventas', icon: <IconBriefcase /> },
     { id: 'reportes', label: 'Reportes', icon: <IconChart /> },
     { id: 'comms', label: 'Canales', icon: <IconMessage /> },
     { id: 'config', label: 'Sistema', icon: <IconSettings /> },
@@ -158,6 +161,7 @@ export default function AdminLayout() {
           {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'control' && <ControlView />}
           {activeTab === 'pymes' && <ContableManager />}
+          {activeTab === 'crm' && <CrmView />}
           {activeTab === 'reportes' && <ReportsView />}
           {activeTab === 'comms' && <CommsView />}
           {activeTab === 'config' && <ConfigView />}
