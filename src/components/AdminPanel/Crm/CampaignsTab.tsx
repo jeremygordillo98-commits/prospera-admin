@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../services/supabase';
-import { Trash2, Edit3, Plus } from 'lucide-react';
+import { Trash2, Edit3, Plus, Clock } from 'lucide-react';
 import CampaignRedactorModal from './CampaignRedactorModal';
 
 interface CampaignsTabProps {
@@ -30,14 +30,90 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
     }
   });
 
-  const eliminarCampana = async (id: string) => {
+  const cancelarEnvioBrevo = async (campaignId: string): Promise<boolean> => {
+    try {
+      const { error: cancelErr } = await supabase.functions.invoke(`send-campaign?batchId=${campaignId}`, {
+        method: 'DELETE'
+      });
+      if (cancelErr) throw cancelErr;
+      return true;
+    } catch (err) {
+      console.error("Error al cancelar en Brevo:", err);
+      return false;
+    }
+  };
+
+  const cancelarEnvioProgramado = async (camp: any) => {
+    if (!confirm("¿Deseas cancelar el envío programado de esta campaña? El correo se detendrá en Brevo y volverá a ser un Borrador.")) return;
+    
+    const ok = await cancelarEnvioBrevo(camp.id);
+    if (ok) {
+      const { error } = await supabase
+        .from('crm_campanas')
+        .update({
+          estado: 'Borrador',
+          scheduled_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', camp.id);
+      
+      if (error) {
+        alert("Se canceló en Brevo pero falló al actualizar la base de datos: " + error.message);
+      } else {
+        alert("Envío programado cancelado correctamente. La campaña ahora es un Borrador.");
+      }
+      refetch();
+    } else {
+      alert("No se pudo cancelar el envío programado en Brevo. Por favor, intente de nuevo.");
+    }
+  };
+
+  const editarCampanaProgramada = async (camp: any) => {
+    if (!confirm("Para editar esta campaña programada, primero debemos cancelar el envío en Brevo. ¿Deseas continuar?")) return;
+    
+    const ok = await cancelarEnvioBrevo(camp.id);
+    if (ok) {
+      const { error } = await supabase
+        .from('crm_campanas')
+        .update({
+          estado: 'Borrador',
+          scheduled_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', camp.id);
+      
+      if (!error) {
+        editBorrador({
+          ...camp,
+          estado: 'Borrador',
+          scheduled_at: null
+        });
+      } else {
+        alert("Se canceló en Brevo pero falló al actualizar la base de datos: " + error.message);
+      }
+      refetch();
+    } else {
+      alert("No se pudo cancelar el envío en Brevo. No se puede editar en este momento.");
+    }
+  };
+
+  const eliminarCampana = async (camp: any) => {
     if (!confirm("¿Está seguro de que desea eliminar este registro de campaña?")) return;
     
     try {
+      if (camp.estado === 'Programado') {
+        const cancelOk = await cancelarEnvioBrevo(camp.id);
+        if (!cancelOk) {
+          if (!confirm("No se pudo cancelar la programación en Brevo. ¿Deseas eliminar el registro en la base de datos de todas formas?")) {
+            return;
+          }
+        }
+      }
+
       const { error } = await supabase
         .from('crm_campanas')
         .delete()
-        .eq('id', id);
+        .eq('id', camp.id);
       
       if (error) throw error;
       refetch();
@@ -170,8 +246,8 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
                     </td>
                     <td style={{ padding: '16px 12px' }}>
                       <span style={{
-                        background: camp.estado === 'Enviado' ? 'rgba(34, 197, 94, 0.15)' : (camp.estado === 'Borrador' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(239, 68, 68, 0.15)'),
-                        color: camp.estado === 'Enviado' ? 'rgb(34, 197, 94)' : (camp.estado === 'Borrador' ? 'rgb(148, 163, 184)' : 'rgb(239, 68, 68)'),
+                        background: camp.estado === 'Enviado' ? 'rgba(34, 197, 94, 0.15)' : (camp.estado === 'Programado' ? 'rgba(59, 130, 246, 0.15)' : (camp.estado === 'Borrador' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(239, 68, 68, 0.15)')),
+                        color: camp.estado === 'Enviado' ? 'rgb(34, 197, 94)' : (camp.estado === 'Programado' ? 'rgb(59, 130, 246)' : (camp.estado === 'Borrador' ? 'rgb(148, 163, 184)' : 'rgb(239, 68, 68)')),
                         padding: '4px 10px',
                         borderRadius: 20,
                         fontSize: '0.7rem',
@@ -181,18 +257,20 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
                         gap: 4
                       }}>
                         {camp.estado === 'Enviado' && '✓ Enviado'}
+                        {camp.estado === 'Programado' && '⏰ Programado'}
                         {camp.estado === 'Borrador' && '✏ Borrador'}
                         {camp.estado === 'Error' && '✗ Error'}
                       </span>
                     </td>
                     <td style={{ padding: '16px 12px', fontSize: '0.85rem', color: theme.textSec, fontWeight: 600 }}>
-                      {camp.sent_at ? new Date(camp.sent_at).toLocaleString('es-EC') : 'N/A'}
+                      {camp.sent_at ? new Date(camp.sent_at).toLocaleString('es-EC') : (camp.scheduled_at ? `⏰ Prog: ${new Date(camp.scheduled_at).toLocaleString('es-EC')}` : 'N/A')}
                     </td>
                     <td style={{ padding: '16px 12px', textAlign: 'right' }}>
                       <div style={{ display: 'inline-flex', gap: 8 }}>
                         {camp.estado === 'Borrador' && (
                           <button
                             onClick={() => editBorrador(camp)}
+                            title="Editar Borrador"
                             style={{
                               background: 'rgba(59, 130, 246, 0.1)',
                               color: 'rgb(59, 130, 246)',
@@ -209,8 +287,49 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
                             <Edit3 size={14} />
                           </button>
                         )}
+                        {camp.estado === 'Programado' && (
+                          <>
+                            <button
+                              onClick={() => editarCampanaProgramada(camp)}
+                              title="Editar Programación (se cancelará el envío actual)"
+                              style={{
+                                background: 'rgba(59, 130, 246, 0.1)',
+                                color: 'rgb(59, 130, 246)',
+                                border: 'none',
+                                padding: '8px',
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              onClick={() => cancelarEnvioProgramado(camp)}
+                              title="Cancelar Envío Programado"
+                              style={{
+                                background: 'rgba(245, 158, 11, 0.1)',
+                                color: 'rgb(245, 158, 11)',
+                                border: 'none',
+                                padding: '8px',
+                                borderRadius: 8,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <Clock size={14} />
+                            </button>
+                          </>
+                        )}
                         <button
-                          onClick={() => eliminarCampana(camp.id)}
+                          onClick={() => eliminarCampana(camp)}
+                          title="Eliminar Campaña"
                           style={{
                             background: 'rgba(239, 68, 68, 0.1)',
                             color: 'rgb(239, 68, 68)',

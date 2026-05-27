@@ -360,7 +360,8 @@ export default function CampaignRedactorModal({
                   email: "soporte@prosperafinanzas.com"
                 },
                 attachment: filesBase64.length > 0 ? filesBase64 : undefined,
-                scheduledAt: scheduledTime
+                scheduledAt: scheduledTime,
+                batchId: campaignId
               }
             });
 
