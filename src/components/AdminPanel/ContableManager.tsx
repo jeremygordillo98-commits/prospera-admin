@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabaseContable, supabaseContableAdmin } from '../../services/supabaseContable';
+import { supabaseContable } from '../../services/supabaseContable';
 import { useTheme } from '../../context/ThemeContext';
 import { Lock, Mail, Loader2, LogOut, ChevronRight, Eye } from 'lucide-react';
 
@@ -106,21 +106,15 @@ export const ContableManager = () => {
     };
 
     const handleImpersonate = async (email: string) => {
-        if (!supabaseContableAdmin) {
-            alert('❌ Falla de configuración: No se encontró la clave SERVICE_ROLE en las variables de entorno de Admin.');
-            return;
-        }
-        
         try {
-            const { data, error } = await supabaseContableAdmin.auth.admin.generateLink({
-                type: 'magiclink',
-                email: email
+            const { data, error } = await supabaseContable.functions.invoke('impersonate-user', {
+                body: { email }
             });
 
             if (error) throw error;
-            if (data?.properties?.action_link) {
+            if (data?.action_link) {
                 if (window.confirm(`🎭 ¿Abrir Pymes impersonando a ${email}? \n\n⚠️ PRECAUCIÓN: Tendrás acceso total a su cuenta. Cualquier cambio que hagas afectará su información real.`)) {
-                    window.open(data.properties.action_link, '_blank');
+                    window.open(data.action_link, '_blank');
                 }
             } else {
                 throw new Error('No se generó el enlace.');

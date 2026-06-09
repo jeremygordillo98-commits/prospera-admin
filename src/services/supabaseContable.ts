@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_CONTABLE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_CONTABLE_SUPABASE_ANON_KEY;
-const supabaseServiceRole = import.meta.env.VITE_CONTABLE_SUPABASE_SERVICE_ROLE_KEY;
 
 export const supabaseContable = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -12,15 +11,4 @@ export const supabaseContable = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: false
   }
 });
-
-// Cliente con privilegios de administrador para crear enlaces mágicos sin contraseña
-export const supabaseContableAdmin = supabaseServiceRole 
-  ? createClient(supabaseUrl, supabaseServiceRole, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      }
-    })
-  : null;
 

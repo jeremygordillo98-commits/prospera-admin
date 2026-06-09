@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase, supabaseAdmin } from '../../services/supabase';
+import { supabase } from '../../services/supabase';
 import { useTheme } from '../../context/ThemeContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -51,21 +51,15 @@ export default function ControlView() {
   };
 
   const handleImpersonate = async (email: string) => {
-    if (!supabaseAdmin) {
-        alert('❌ Falla de configuración: No se encontró la clave SERVICE_ROLE en las variables de entorno para Prospera App.');
-        return;
-    }
-    
     try {
-        const { data, error } = await supabaseAdmin.auth.admin.generateLink({
-            type: 'magiclink',
-            email: email
+        const { data, error } = await supabase.functions.invoke('impersonate-user', {
+            body: { email }
         });
 
         if (error) throw error;
-        if (data?.properties?.action_link) {
+        if (data?.action_link) {
             if (window.confirm(`🎭 ¿Abrir App impersonando a ${email}? \n\n⚠️ PRECAUCIÓN: Cualquier cambio que hagas afectará sus presupuestos y transacciones reales.`)) {
-                window.open(data.properties.action_link, '_blank');
+                window.open(data.action_link, '_blank');
             }
         } else {
             throw new Error('No se generó el enlace.');
