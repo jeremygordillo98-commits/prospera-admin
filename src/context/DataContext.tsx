@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { supabase } from "../services/supabase"; 
 import { Toast } from "../components/Toast";
 
@@ -50,26 +50,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'warning' | 'info' } | null>(null);
 
+  const initialLoadDone = useRef(false);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) cargarDatos(session.user.id);
+      if (session) {
+        cargarDatos(session.user.id, initialLoadDone.current);
+        initialLoadDone.current = true;
+      }
       else setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) cargarDatos(session.user.id);
+      if (session) {
+        cargarDatos(session.user.id, initialLoadDone.current);
+        initialLoadDone.current = true;
+      }
       else {
         setIsAdmin(false);
         setLoading(false);
+        initialLoadDone.current = false;
       }
     });
     return () => subscription.unsubscribe();
   }, []);
 
-  const cargarDatos = async (userId: string) => {
-    setLoading(true);
+  const cargarDatos = async (userId: string, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { data: perfilData } = await supabase.from('perfiles').select('*').eq('id', userId).single();
 
