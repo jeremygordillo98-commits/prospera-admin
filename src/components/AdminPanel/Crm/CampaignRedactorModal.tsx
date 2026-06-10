@@ -66,6 +66,7 @@ export default function CampaignRedactorModal({
   
   const [sendingCampaign, setSendingCampaign] = useState(false);
   const [campaignProgress, setCampaignProgress] = useState<{ current: number; total: number } | null>(null);
+  const [customAlert, setCustomAlert] = useState<{ type: 'success' | 'error' | 'info'; title: string; message: string; onClose?: () => void } | null>(null);
 
   // Inicializar el formulario si se recibe una campaña para editar (borrador)
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function CampaignRedactorModal({
         asunto: campaignToEdit.asunto || '',
         contenido: campaignToEdit.contenido || '',
         destinatarios: (campaignToEdit.destinatarios as any) || 'prueba',
-        manualEmails: campaignToEdit.destinatarios === 'manual' ? (campaignToEdit.titulo.includes('(') ? '' : campaignToEdit.manualEmails || '') : '',
+        manualEmails: campaignToEdit.destinatarios === 'manual' ? (campaignToEdit.titulo.includes('(') ? '' : campaignToEdit.manual_emails || '') : '',
         testEmail: '',
         programado: !!campaignToEdit.scheduled_at,
         scheduledDate: campaignToEdit.scheduled_at ? new Date(campaignToEdit.scheduled_at).toISOString().slice(0, 16) : ''
@@ -231,7 +232,11 @@ export default function CampaignRedactorModal({
       const results = await Promise.all(encodedPromises);
       setFilesBase64(prev => [...prev, ...results]);
     } catch (err) {
-      alert("Error al procesar los archivos adjuntos.");
+      setCustomAlert({
+        type: 'error',
+        title: 'Error de Adjuntos',
+        message: 'Error al procesar los archivos adjuntos.'
+      });
     }
     e.target.value = '';
   };
@@ -243,22 +248,38 @@ export default function CampaignRedactorModal({
 
   const enviarCampana = async (esBorrador: boolean = false) => {
     if (!campanaForm.titulo || !campanaForm.asunto || !campanaForm.contenido) {
-      alert("Por favor, rellene el título, asunto y contenido del correo.");
+      setCustomAlert({
+        type: 'error',
+        title: 'Campos Incompletos',
+        message: 'Por favor, rellene el título, asunto y contenido del correo.'
+      });
       return;
     }
 
     if (campanaForm.destinatarios === 'prueba' && !campanaForm.testEmail) {
-      alert("Por favor, ingrese el correo electrónico de prueba.");
+      setCustomAlert({
+        type: 'error',
+        title: 'Correo de Prueba Requerido',
+        message: 'Por favor, ingrese el correo electrónico de prueba.'
+      });
       return;
     }
 
     if (campanaForm.destinatarios === 'manual' && !campanaForm.manualEmails) {
-      alert("Por favor, ingrese al menos un correo electrónico en el campo manual.");
+      setCustomAlert({
+        type: 'error',
+        title: 'Correos Manuales Requeridos',
+        message: 'Por favor, ingrese al menos un correo electrónico en el campo manual.'
+      });
       return;
     }
 
     if (sizeLimitExceeded) {
-      alert("La suma de todos los archivos adjuntos no puede exceder el límite de 5MB.");
+      setCustomAlert({
+        type: 'error',
+        title: 'Límite de Peso Excedido',
+        message: 'La suma de todos los archivos adjuntos no puede exceder el límite de 5MB.'
+      });
       return;
     }
 
@@ -300,12 +321,13 @@ export default function CampaignRedactorModal({
       }
 
       // 2. Guardar o actualizar registro de la campaña en base de datos
-      const campaignData = {
+      const campaignData: any = {
         titulo: campanaForm.titulo,
         asunto: campanaForm.asunto,
         contenido: campanaForm.contenido,
         plantilla_id: activeTemplate,
         destinatarios: campanaForm.destinatarios,
+        manual_emails: campanaForm.destinatarios === 'manual' ? campanaForm.manualEmails : null,
         estado: esBorrador ? 'Borrador' : (campanaForm.programado ? 'Programado' : 'Enviado'),
         scheduled_at: (campanaForm.programado && campanaForm.scheduledDate) ? new Date(campanaForm.scheduledDate).toISOString() : null,
         sent_at: (esBorrador || campanaForm.programado) ? null : new Date().toISOString(),
@@ -382,19 +404,44 @@ export default function CampaignRedactorModal({
             })
             .eq('id', campaignId);
           
-          alert(`Campaña procesada. Se enviaron con éxito ${listadoDestinatarios.length - errorsCount} de ${listadoDestinatarios.length} correos.`);
+          setCustomAlert({
+            type: 'success',
+            title: 'Campaña Procesada',
+            message: `Se enviaron con éxito ${listadoDestinatarios.length - errorsCount} de ${listadoDestinatarios.length} correos.`,
+            onClose: () => {
+              onSuccess();
+              onClose();
+            }
+          });
         } else {
-          alert(`¡Campaña masiva enviada con éxito total a los ${listadoDestinatarios.length} destinatarios!`);
+          setCustomAlert({
+            type: 'success',
+            title: '¡Envío Exitoso!',
+            message: `¡Campaña masiva enviada con éxito total a los ${listadoDestinatarios.length} destinatarios!`,
+            onClose: () => {
+              onSuccess();
+              onClose();
+            }
+          });
         }
       } else {
-        alert("Borrador de campaña guardado exitosamente.");
+        setCustomAlert({
+          type: 'success',
+          title: 'Guardado',
+          message: 'Borrador de campaña guardado exitosamente.',
+          onClose: () => {
+            onSuccess();
+            onClose();
+          }
+        });
       }
-
-      onSuccess();
-      onClose();
     } catch (err: any) {
       console.error("Error al procesar campaña:", err);
-      alert(`Error al procesar la campaña: ${err.message || 'Error desconocido'}`);
+      setCustomAlert({
+        type: 'error',
+        title: 'Error al Procesar',
+        message: `Error al procesar la campaña: ${err.message || 'Error desconocido'}`
+      });
     } finally {
       setSendingCampaign(false);
       setCampaignProgress(null);
@@ -872,6 +919,78 @@ export default function CampaignRedactorModal({
         </div>
 
       </div>
+
+      {/* MODAL DE NOTIFICACIÓN PREMIUM */}
+      {customAlert && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(15, 23, 42, 0.75)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 2147483647,
+          padding: 16
+        }}>
+          <div style={{
+            background: isDark ? '#1e293b' : '#ffffff',
+            border: `1px solid ${theme.border}`,
+            borderRadius: 20,
+            width: '100%',
+            maxWidth: 400,
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+            overflow: 'hidden',
+            textAlign: 'center',
+            padding: '32px 24px'
+          }}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: customAlert.type === 'success' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              color: customAlert.type === 'success' ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px',
+              fontSize: '1.8rem',
+              fontWeight: 'bold'
+            }}>
+              {customAlert.type === 'success' ? '✓' : '✗'}
+            </div>
+            
+            <h4 style={{ margin: '0 0 8px', fontSize: '1.2rem', fontWeight: 900, color: theme.text }}>
+              {customAlert.title}
+            </h4>
+            
+            <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: theme.textSec, lineHeight: 1.5 }}>
+              {customAlert.message}
+            </p>
+            
+            <button 
+              onClick={() => {
+                setCustomAlert(null);
+                if (customAlert.onClose) customAlert.onClose();
+              }}
+              style={{
+                background: customAlert.type === 'success' ? `linear-gradient(135deg, ${theme.primary}, #00b37e)` : 'rgb(239, 68, 68)',
+                color: '#fff',
+                border: 'none',
+                width: '100%',
+                padding: '12px',
+                borderRadius: 12,
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '0.95rem',
+                boxShadow: customAlert.type === 'success' ? `0 4px 15px ${theme.primary}25` : 'none'
+              }}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
