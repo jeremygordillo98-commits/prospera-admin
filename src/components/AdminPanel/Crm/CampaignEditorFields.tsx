@@ -14,7 +14,17 @@ interface CampaignEditorFieldsProps {
     programado: boolean;
     scheduledDate: string;
   };
-  setCampanaForm: React.Dispatch<React.SetStateAction<any>>;
+  setCampanaForm: React.Dispatch<React.SetStateAction<{
+    id: string;
+    titulo: string;
+    asunto: string;
+    contenido: string;
+    destinatarios: 'prueba' | 'todos_leads' | 'todos_pymes' | 'manual';
+    manualEmails: string;
+    testEmail: string;
+    programado: boolean;
+    scheduledDate: string;
+  }>>;
   activeTemplate: string;
   setActiveTemplate: (template: string) => void;
   filesList: File[];
@@ -23,7 +33,7 @@ interface CampaignEditorFieldsProps {
   sendingCampaign: boolean;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeFile: (idx: number) => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement>;
   theme: any;
   isDark: boolean;
   isMobile: boolean;
