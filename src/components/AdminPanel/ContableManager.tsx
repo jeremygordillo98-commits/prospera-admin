@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabaseContable } from '../../services/supabaseContable';
+import { supabase } from '../../services/supabase'; // Para la Edge Function impersonate-user (solo existe en el proyecto principal)
 import { useTheme } from '../../context/ThemeContext';
 import { Lock, Mail, Loader2, LogOut, ChevronRight, Eye } from 'lucide-react';
 
@@ -497,7 +498,9 @@ export const ContableManager = () => {
                           onClick={async () => {
                             setImpersonateModal(prev => prev ? { ...prev, loading: true } : null);
                             try {
-                              const { data, error } = await supabaseContable.functions.invoke('impersonate-user', {
+                              // La Edge Function 'impersonate-user' solo está desplegada en el
+                              // proyecto principal de Supabase, no en el de Pymes.
+                              const { data, error } = await supabase.functions.invoke('impersonate-user', {
                                 body: { email: impersonateModal.email }
                               });
                               if (error) throw error;
