@@ -500,7 +500,20 @@ export const ContableManager = () => {
                               const { data, error } = await supabaseContable.functions.invoke('impersonate-user', {
                                 body: { email: impersonateModal.email }
                               });
-                              if (error) throw error;
+                              if (error) {
+                                console.error("Error completo de Edge Function:", error);
+                                let detailMsg = "";
+                                try {
+                                  const text = await error.context?.text();
+                                  if (text) {
+                                    const parsed = JSON.parse(text);
+                                    detailMsg = parsed.error || parsed.message;
+                                  }
+                                } catch (e) {
+                                  console.error("No se pudo parsear el error context:", e);
+                                }
+                                throw new Error(detailMsg || error.message || "Error al invocar Edge Function");
+                              }
                               if (data?.action_link) {
                                 setImpersonateModal(prev => prev ? { ...prev, loading: false, actionLink: data.action_link } : null);
                               } else {
