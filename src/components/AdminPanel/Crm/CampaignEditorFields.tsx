@@ -59,7 +59,7 @@ export default function CampaignEditorFields({
 }: CampaignEditorFieldsProps) {
   return (
     <div className="custom-scrollbar" style={{ 
-      width: '60%', 
+      width: '100%', 
       padding: '32px', 
       overflowY: 'auto', 
       display: 'flex', 
