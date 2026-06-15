@@ -13,6 +13,7 @@ interface CampaignEditorFieldsProps {
     testEmail: string;
     programado: boolean;
     scheduledDate: string;
+    senderEmail: string;
   };
   setCampanaForm: React.Dispatch<React.SetStateAction<{
     id: string;
@@ -24,6 +25,7 @@ interface CampaignEditorFieldsProps {
     testEmail: string;
     programado: boolean;
     scheduledDate: string;
+    senderEmail: string;
   }>>;
   activeTemplate: string;
   setActiveTemplate: (template: string) => void;
@@ -38,6 +40,8 @@ interface CampaignEditorFieldsProps {
   isDark: boolean;
   isMobile: boolean;
   btnStyle: any;
+  previousAttachments?: string[];
+  setPreviousAttachments?: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export default function CampaignEditorFields({
@@ -55,7 +59,9 @@ export default function CampaignEditorFields({
   theme,
   isDark,
   isMobile,
-  btnStyle
+  btnStyle,
+  previousAttachments = [],
+  setPreviousAttachments
 }: CampaignEditorFieldsProps) {
   return (
     <div className="custom-scrollbar" style={{ 
@@ -152,6 +158,63 @@ export default function CampaignEditorFields({
               fontSize: '0.9rem',
               fontWeight: 600,
               outline: 'none'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Selección de Remitente */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.textSec, marginBottom: 6 }}>Dirección del Remitente</label>
+          <select
+            value={campanaForm.senderEmail}
+            disabled={sendingCampaign}
+            onChange={(e) => setCampanaForm(prev => ({ ...prev, senderEmail: e.target.value }))}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: isDark ? '#1e293b' : '#fff',
+              border: `1px solid ${theme.border}`,
+              borderRadius: 12,
+              padding: '12px 14px',
+              color: theme.text,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="soporte@prosperafinanzas.com">✉️ soporte@prosperafinanzas.com (Soporte Oficial)</option>
+            <option value="comunicaciones@prosperafinanzas.com">✉️ comunicaciones@prosperafinanzas.com (Comunicaciones)</option>
+            <option value="ventas@prosperafinanzas.com">✉️ ventas@prosperafinanzas.com (Comercial)</option>
+            <option value="facturacion@prosperafinanzas.com">✉️ facturacion@prosperafinanzas.com (Facturación)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.textSec, marginBottom: 6 }}>Nombre del Remitente</label>
+          <input
+            type="text"
+            disabled={true}
+            value={
+              campanaForm.senderEmail === 'facturacion@prosperafinanzas.com' ? 'Prospera Facturación' :
+              campanaForm.senderEmail === 'ventas@prosperafinanzas.com' ? 'Prospera Comercial' :
+              campanaForm.senderEmail === 'comunicaciones@prosperafinanzas.com' ? 'Prospera Comunicaciones' :
+              'Prospera Soporte'
+            }
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)',
+              border: `1px solid ${theme.border}`,
+              borderRadius: 12,
+              padding: '12px 14px',
+              color: theme.textSec,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              outline: 'none',
+              cursor: 'not-allowed'
             }}
           />
         </div>
@@ -361,6 +424,29 @@ export default function CampaignEditorFields({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Archivos previos (sólo lectura) */}
+        {previousAttachments.length > 0 && filesList.length === 0 && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: '0.72rem', color: theme.textSec, fontWeight: 700, textTransform: 'uppercase' }}>Archivos adjuntados previamente (se conservarán):</span>
+            {previousAttachments.map((name, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)', border: `1px solid ${theme.border}`, padding: '10px 14px', borderRadius: 10, fontSize: '0.82rem', opacity: 0.85 }}>
+                <FileText size={16} style={{ color: theme.textSec, marginRight: 10 }} />
+                <span style={{ flex: 1, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: theme.text }}>{name}</span>
+                <button
+                  type="button"
+                  disabled={sendingCampaign}
+                  onClick={() => setPreviousAttachments && setPreviousAttachments([])}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', fontWeight: 800 }}
+                  title="Quitar todos los adjuntos previos"
+                >
+                  <Trash2 size={14} /> Quitar
+                </button>
+              </div>
+            ))}
+            <span style={{ fontSize: '0.7rem', color: '#eab308', fontWeight: 700 }}>⚠️ Nota: Si cargas archivos nuevos, se reemplazarán los adjuntos anteriores.</span>
           </div>
         )}
 

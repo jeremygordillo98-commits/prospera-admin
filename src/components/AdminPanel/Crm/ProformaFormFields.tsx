@@ -8,6 +8,7 @@ interface ProformaFormFieldsProps {
     email: string;
     celular: string;
     validezDias: number;
+    senderEmail?: string;
   };
   setCliente: React.Dispatch<React.SetStateAction<any>>;
   proformaIndex: number;
@@ -185,6 +186,62 @@ export default function ProformaFormFields({
             }}
           />
         </div>
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.textSec, marginBottom: 6 }}>Dirección del Remitente</label>
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: theme.textSec, display: 'flex' }}><Mail size={16} /></span>
+          <select
+            value={cliente.senderEmail || 'soporte@prosperafinanzas.com'}
+            onChange={(e) => setCliente({ ...cliente, senderEmail: e.target.value })}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: isDark ? '#1e293b' : '#fff',
+              border: `1px solid ${theme.border}`,
+              borderRadius: 12,
+              padding: '12px 12px 12px 40px',
+              color: theme.text,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="soporte@prosperafinanzas.com">✉️ soporte@prosperafinanzas.com (Soporte Oficial)</option>
+            <option value="comunicaciones@prosperafinanzas.com">✉️ comunicaciones@prosperafinanzas.com (Comunicaciones)</option>
+            <option value="ventas@prosperafinanzas.com">✉️ ventas@prosperafinanzas.com (Comercial)</option>
+            <option value="facturacion@prosperafinanzas.com">✉️ facturacion@prosperafinanzas.com (Facturación)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.textSec, marginBottom: 6 }}>Nombre del Remitente</label>
+        <input
+          type="text"
+          disabled={true}
+          value={
+            cliente.senderEmail === 'facturacion@prosperafinanzas.com' ? 'Prospera Facturación' :
+            cliente.senderEmail === 'ventas@prosperafinanzas.com' ? 'Prospera Comercial' :
+            cliente.senderEmail === 'comunicaciones@prosperafinanzas.com' ? 'Prospera Comunicaciones' :
+            'Prospera Soporte'
+          }
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)',
+            border: `1px solid ${theme.border}`,
+            borderRadius: 12,
+            padding: '12px 14px',
+            color: theme.textSec,
+            fontSize: '0.9rem',
+            fontWeight: 600,
+            outline: 'none',
+            cursor: 'not-allowed'
+          }}
+        />
       </div>
     </div>
   );

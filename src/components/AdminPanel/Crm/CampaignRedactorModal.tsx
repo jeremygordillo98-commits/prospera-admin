@@ -36,10 +36,12 @@ export default function CampaignRedactorModal({
     manualEmails: '',
     testEmail: '',
     programado: false,
-    scheduledDate: ''
+    scheduledDate: '',
+    senderEmail: 'soporte@prosperafinanzas.com'
   });
 
   const [activeTemplate, setActiveTemplate] = useState('ventas_pymes');
+  const [previousAttachments, setPreviousAttachments] = useState<string[]>([]);
   const [filesList, setFilesList] = useState<File[]>([]);
   const [filesBase64, setFilesBase64] = useState<Array<{ content: string; name: string }>>([]);
   const [previewHtml, setPreviewHtml] = useState('');
@@ -51,21 +53,28 @@ export default function CampaignRedactorModal({
   // Inicializar el formulario si se recibe una campaña para editar (borrador)
   useEffect(() => {
     if (campaignToEdit) {
+      const match = campaignToEdit.titulo.match(/(.*)📎\[(.*)\]$/);
+      const cleanTitle = match ? match[1] : campaignToEdit.titulo;
+      const previousAtts = match ? match[2].split(',').map((s: any) => s.trim()) : [];
+      setPreviousAttachments(previousAtts);
+
       setCampanaForm({
         id: campaignToEdit.id || '',
-        titulo: campaignToEdit.titulo || '',
+        titulo: cleanTitle || '',
         asunto: campaignToEdit.asunto || '',
         contenido: campaignToEdit.contenido || '',
         destinatarios: (campaignToEdit.destinatarios as any) || 'prueba',
         manualEmails: campaignToEdit.destinatarios === 'manual' ? (campaignToEdit.titulo.includes('(') ? '' : campaignToEdit.manual_emails || '') : '',
-        testEmail: '',
+        testEmail: campaignToEdit.destinatarios === 'prueba' ? campaignToEdit.manual_emails || '' : '',
         programado: !!campaignToEdit.scheduled_at,
-        scheduledDate: campaignToEdit.scheduled_at ? new Date(campaignToEdit.scheduled_at).toISOString().slice(0, 16) : ''
+        scheduledDate: campaignToEdit.scheduled_at ? new Date(campaignToEdit.scheduled_at).toISOString().slice(0, 16) : '',
+        senderEmail: campaignToEdit.sender_email || 'soporte@prosperafinanzas.com'
       });
       if (campaignToEdit.plantilla_id) {
         setActiveTemplate(campaignToEdit.plantilla_id);
       }
     } else {
+      setPreviousAttachments([]);
       setCampanaForm({
         id: '',
         titulo: '',
@@ -75,7 +84,8 @@ export default function CampaignRedactorModal({
         manualEmails: '',
         testEmail: '',
         programado: false,
-        scheduledDate: ''
+        scheduledDate: '',
+        senderEmail: 'soporte@prosperafinanzas.com'
       });
       setFilesList([]);
       setFilesBase64([]);
@@ -191,6 +201,11 @@ export default function CampaignRedactorModal({
     setCampaignProgress(null);
 
     try {
+      // Obtener el usuario logueado para replyTo
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminEmail = user?.email || 'soporte@prosperafinanzas.com';
+      const adminName = user?.user_metadata?.nombre_completo || 'Administrador Prospera';
+
       // 1. Obtener lista de destinatarios (correo, nombre)
       let listadoDestinatarios: Array<{ email: string; nombre: string }> = [];
 
@@ -225,17 +240,26 @@ export default function CampaignRedactorModal({
       }
 
       // 2. Guardar o actualizar registro de la campaña en base de datos
+      let attachmentNames = '';
+      if (filesList.length > 0) {
+        attachmentNames = filesList.map(f => f.name).join(', ');
+      } else if (previousAttachments.length > 0) {
+        attachmentNames = previousAttachments.join(', ');
+      }
+      const dbTitulo = attachmentNames ? `${campanaForm.titulo}📎[${attachmentNames}]` : campanaForm.titulo;
+
       const campaignData: any = {
-        titulo: campanaForm.titulo,
+        titulo: dbTitulo,
         asunto: campanaForm.asunto,
         contenido: campanaForm.contenido,
         plantilla_id: activeTemplate,
         destinatarios: campanaForm.destinatarios,
-        manual_emails: campanaForm.destinatarios === 'manual' ? campanaForm.manualEmails : null,
+        manual_emails: campanaForm.destinatarios === 'manual' ? campanaForm.manualEmails : (campanaForm.destinatarios === 'prueba' ? campanaForm.testEmail : null),
         estado: esBorrador ? 'Borrador' : (campanaForm.programado ? 'Programado' : 'Enviado'),
         scheduled_at: (campanaForm.programado && campanaForm.scheduledDate) ? new Date(campanaForm.scheduledDate).toISOString() : null,
         sent_at: (esBorrador || campanaForm.programado) ? null : new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        sender_email: campanaForm.senderEmail
       };
 
       let campaignId = campanaForm.id;
@@ -282,8 +306,15 @@ export default function CampaignRedactorModal({
                 subject: campanaForm.asunto.replace(/\{\{nombre\}\}/g, dest.nombre),
                 htmlContent: finalHtml,
                 sender: {
-                  name: "Prospera Finanzas",
-                  email: "soporte@prosperafinanzas.com"
+                  name: campanaForm.senderEmail === 'facturacion@prosperafinanzas.com' ? 'Prospera Facturación' :
+                        campanaForm.senderEmail === 'ventas@prosperafinanzas.com' ? 'Prospera Comercial' :
+                        campanaForm.senderEmail === 'comunicaciones@prosperafinanzas.com' ? 'Prospera Comunicaciones' :
+                        'Prospera Soporte',
+                  email: campanaForm.senderEmail
+                },
+                replyTo: {
+                  email: "prosperaapp.soporte@gmail.com",
+                  name: adminName
                 },
                 attachment: filesBase64.length > 0 ? filesBase64 : undefined,
                 scheduledAt: scheduledTime,
@@ -492,6 +523,8 @@ export default function CampaignRedactorModal({
             isDark={isDark}
             isMobile={isMobile}
             btnStyle={btnStyle}
+            previousAttachments={previousAttachments}
+            setPreviousAttachments={setPreviousAttachments}
           />
         </div>
 

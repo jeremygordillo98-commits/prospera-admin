@@ -19,7 +19,8 @@ export default function ProformasTab({ theme, isDark, isMobile }: ProformasTabPr
     ruc: '',
     email: '',
     celular: '',
-    validezDias: 15
+    validezDias: 15,
+    senderEmail: 'soporte@prosperafinanzas.com'
   });
 
   const [items, setItems] = useState<Array<{ id: string; descripcion: string; cantidad: number; precioUnitario: number }>>([
@@ -109,6 +110,10 @@ export default function ProformasTab({ theme, isDark, isMobile }: ProformasTabPr
 
     setSendingEmail(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const adminEmail = user?.email || 'soporte@prosperafinanzas.com';
+      const adminName = user?.user_metadata?.nombre_completo || 'Administrador Prospera';
+
       const proformaNum = `PR-${String(proformaIndex).padStart(5, '0')}`;
       const doc = generarPDFDocument(cliente, items, descuento, ivaRate, proformaNum, logoBase64);
       const pdfBase64 = doc.output('datauristring').split(',')[1];
@@ -154,8 +159,15 @@ export default function ProformasTab({ theme, isDark, isMobile }: ProformasTabPr
           subject: `Proforma Comercial Prospera — ${clienteNombre}`,
           htmlContent: htmlContent,
           sender: {
-            name: "Prospera Finanzas",
-            email: "soporte@prosperafinanzas.com"
+            name: cliente.senderEmail === 'facturacion@prosperafinanzas.com' ? 'Prospera Facturación' :
+                  cliente.senderEmail === 'ventas@prosperafinanzas.com' ? 'Prospera Comercial' :
+                  cliente.senderEmail === 'comunicaciones@prosperafinanzas.com' ? 'Prospera Comunicaciones' :
+                  'Prospera Soporte',
+            email: cliente.senderEmail || "soporte@prosperafinanzas.com"
+          },
+          replyTo: {
+            email: "prosperaapp.soporte@gmail.com",
+            name: adminName
           },
           attachment: {
             base64: pdfBase64,
