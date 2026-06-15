@@ -257,7 +257,7 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
                       {new Date(camp.created_at).toLocaleDateString()}
                     </td>
                     <td style={{ padding: '16px 12px', fontWeight: 800, fontSize: '0.9rem' }}>
-                      {camp.titulo}
+                      {camp.titulo.match(/(.*)📎\[(.*)\]$/)?.[1] || camp.titulo}
                     </td>
                     <td style={{ padding: '16px 12px', fontSize: '0.85rem', color: theme.textSec, fontWeight: 600 }}>
                       {camp.asunto}
@@ -436,120 +436,244 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
       />
 
       {/* MODAL VISOR DE DESTINATARIOS */}
-      {selectedCampaignRecipients && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(15, 23, 42, 0.75)',
-          backdropFilter: 'blur(12px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 99999999,
-          padding: 16
-        }}>
+      {/* MODAL DETALLES DE LA CAMPAÑA */}
+      {selectedCampaignRecipients && (() => {
+        const matchInfo = selectedCampaignRecipients.titulo.match(/(.*)📎\[(.*)\]$/);
+        const cleanTitleInfo = matchInfo ? matchInfo[1] : selectedCampaignRecipients.titulo;
+        const attachmentsInfo = matchInfo ? matchInfo[2].split(',').map((s: string) => s.trim()) : [];
+        const senderName = selectedCampaignRecipients.sender_email === 'facturacion@prosperafinanzas.com' ? 'Prospera Facturación' :
+          selectedCampaignRecipients.sender_email === 'ventas@prosperafinanzas.com' ? 'Prospera Comercial' :
+          selectedCampaignRecipients.sender_email === 'comunicaciones@prosperafinanzas.com' ? 'Prospera Comunicaciones' :
+          'Prospera Soporte';
+        const emailsList = selectedCampaignRecipients.manual_emails
+          ? selectedCampaignRecipients.manual_emails.split(/[\n,;]/).map((s: string) => s.trim()).filter(Boolean)
+          : (selectedCampaignRecipients.destinatarios === 'prueba' ? ['admin@prospera.com'] : []);
+          
+        return (
           <div style={{
-            background: isDark ? '#1e293b' : '#ffffff',
-            border: `1px solid ${theme.border}`,
-            borderRadius: 20,
-            width: '100%',
-            maxWidth: 500,
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
-            overflow: 'hidden'
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999999,
+            padding: 16
           }}>
-            <header style={{
-              padding: '20px 24px',
-              borderBottom: `1px solid ${theme.border}`,
+            <div style={{
+              background: isDark ? '#1e293b' : '#ffffff',
+              border: `1px solid ${theme.border}`,
+              borderRadius: 20,
+              width: '100%',
+              maxWidth: 600,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+              overflow: 'hidden',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
+              flexDirection: 'column',
+              maxHeight: '90vh'
             }}>
-              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: theme.text }}>Destinatarios de la Campaña</h4>
-              <button 
-                onClick={() => setSelectedCampaignRecipients(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: theme.textSec,
-                  fontSize: '1.2rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                ✕
-              </button>
-            </header>
-            <div style={{ padding: '24px', maxHeight: 300, overflowY: 'auto' }}>
-              <div style={{ marginBottom: 16 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
-                  Tipo de Destinatario
-                </span>
-                <span style={{
-                  background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
-                  color: theme.text,
-                  padding: '4px 10px',
-                  borderRadius: 8,
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  display: 'inline-block'
-                }}>
-                  {selectedCampaignRecipients.destinatarios === 'todos_leads' && '👤 Todos los Leads CRM'}
-                  {selectedCampaignRecipients.destinatarios === 'todos_pymes' && '📱 Todos los Usuarios App'}
-                  {selectedCampaignRecipients.destinatarios === 'manual' && '✏️ Manual'}
-                  {selectedCampaignRecipients.destinatarios === 'prueba' && '🧪 Prueba'}
-                </span>
-              </div>
-              
-              <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 6 }}>
-                  Lista de Correos
-                </span>
-                {selectedCampaignRecipients.destinatarios === 'manual' ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {(selectedCampaignRecipients.manual_emails || '').split(/[\n,;]/).map((email: string) => email.trim()).filter(Boolean).map((email: string, i: number) => (
-                      <div key={i} style={{ fontSize: '0.85rem', fontWeight: 600, color: theme.text, padding: '8px 12px', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 8 }}>
-                        {email}
-                      </div>
-                    ))}
+              <header style={{
+                padding: '20px 24px',
+                borderBottom: `1px solid ${theme.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                flexShrink: 0
+              }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 900, color: theme.text }}>Detalles de la Campaña</h4>
+                  <span style={{ fontSize: '0.8rem', color: theme.textSec, fontWeight: 600 }}>{cleanTitleInfo}</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedCampaignRecipients(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: theme.textSec,
+                    fontSize: '1.2rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✕
+                </button>
+              </header>
+              <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 16, flex: 1 }}>
+                
+                {selectedCampaignRecipients.estado === 'Programado' && (
+                  <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: 12, padding: 12, fontSize: '0.82rem', color: theme.text, fontWeight: 600 }}>
+                    ⚠️ <strong>Nota:</strong> Esta campaña está programada para enviarse en el futuro. Si decides editarla, se cancelará su programación automática en Brevo y volverá a ser un Borrador para que la puedas ajustar y volver a programar.
                   </div>
-                ) : selectedCampaignRecipients.destinatarios === 'prueba' ? (
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: theme.text, padding: '8px 12px', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', borderRadius: 8 }}>
-                    {selectedCampaignRecipients.asunto.includes('TEST') ? 'admin@prospera.com (Enviado a destinatario de prueba)' : 'admin@prospera.com'}
-                  </div>
-                ) : (
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: theme.textSec, fontStyle: 'italic' }}>
-                    Esta campaña fue enviada de forma masiva a todo el grupo seleccionado ({selectedCampaignRecipients.destinatarios === 'todos_leads' ? 'Leads CRM' : 'Usuarios App'}).
-                  </p>
                 )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
+                      Estado
+                    </span>
+                    <span style={{
+                      background: selectedCampaignRecipients.estado === 'Enviado' ? 'rgba(34, 197, 94, 0.15)' : (selectedCampaignRecipients.estado === 'Programado' ? 'rgba(59, 130, 246, 0.15)' : (selectedCampaignRecipients.estado === 'Borrador' ? 'rgba(148, 163, 184, 0.15)' : 'rgba(239, 68, 68, 0.15)')),
+                      color: selectedCampaignRecipients.estado === 'Enviado' ? 'rgb(34, 197, 94)' : (selectedCampaignRecipients.estado === 'Programado' ? 'rgb(59, 130, 246)' : (selectedCampaignRecipients.estado === 'Borrador' ? 'rgb(148, 163, 184)' : 'rgb(239, 68, 68)')),
+                      padding: '4px 10px',
+                      borderRadius: 20,
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4
+                    }}>
+                      {selectedCampaignRecipients.estado === 'Enviado' && '✓ Enviado'}
+                      {selectedCampaignRecipients.estado === 'Programado' && '⏰ Programado'}
+                      {selectedCampaignRecipients.estado === 'Borrador' && '✏ Borrador'}
+                      {selectedCampaignRecipients.estado === 'Error' && '✗ Error'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
+                      Fecha
+                    </span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: theme.text }}>
+                      {selectedCampaignRecipients.sent_at ? new Date(selectedCampaignRecipients.sent_at).toLocaleString('es-EC') : (selectedCampaignRecipients.scheduled_at ? `⏰ Prog: ${new Date(selectedCampaignRecipients.scheduled_at).toLocaleString('es-EC')}` : 'N/A')}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
+                      Remitente
+                    </span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.text }}>
+                      {senderName} <span style={{ fontWeight: 500, color: theme.textSec }}>&lt;{selectedCampaignRecipients.sender_email || 'soporte@prosperafinanzas.com'}&gt;</span>
+                    </span>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
+                      Asunto Comercial
+                    </span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: theme.text }}>
+                      {selectedCampaignRecipients.asunto}
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 4 }}>
+                    Destinatarios ({selectedCampaignRecipients.destinatarios === 'todos_leads' ? 'Leads CRM' : selectedCampaignRecipients.destinatarios === 'todos_pymes' ? 'Usuarios App' : selectedCampaignRecipients.destinatarios === 'manual' ? 'Lista Manual' : 'Prueba'})
+                  </span>
+                  {selectedCampaignRecipients.destinatarios === 'manual' || selectedCampaignRecipients.destinatarios === 'prueba' ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 100, overflowY: 'auto', padding: 8, background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)', borderRadius: 10, border: `1px solid ${theme.border}` }}>
+                      {emailsList.map((email: string, i: number) => (
+                        <span key={i} style={{ fontSize: '0.78rem', fontWeight: 600, color: theme.text, padding: '4px 8px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderRadius: 6 }}>
+                          {email}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: theme.text }}>
+                      Se envió de forma masiva a todo el grupo de {selectedCampaignRecipients.destinatarios === 'todos_leads' ? 'Leads CRM' : 'Usuarios Registrados de la App'}.
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 6 }}>
+                    Archivos Adjuntos
+                  </span>
+                  {attachmentsInfo.length > 0 ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {attachmentsInfo.map((name: string, i: number) => (
+                        <span key={i} style={{ fontSize: '0.8rem', fontWeight: 700, color: theme.primary, background: theme.primary + '10', border: `1px solid ${theme.primary}20`, padding: '6px 12px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          📎 {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: '0.85rem', color: theme.textSec, fontStyle: 'italic' }}>Ninguno</span>
+                  )}
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: theme.textSec, display: 'block', marginBottom: 6 }}>
+                    Mensaje Redactado
+                  </span>
+                  <div style={{
+                    maxHeight: 180,
+                    overflowY: 'auto',
+                    padding: 14,
+                    background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
+                    borderRadius: 12,
+                    border: `1px solid ${theme.border}`,
+                    fontSize: '0.85rem',
+                    whiteSpace: 'pre-wrap',
+                    color: theme.text,
+                    fontFamily: 'monospace',
+                    lineHeight: 1.5
+                  }}>
+                    {selectedCampaignRecipients.contenido}
+                  </div>
+                </div>
+
               </div>
+              <footer style={{
+                padding: '16px 24px',
+                borderTop: `1px solid ${theme.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                flexShrink: 0
+              }}>
+                <div>
+                  {(selectedCampaignRecipients.estado === 'Programado' || selectedCampaignRecipients.estado === 'Borrador') && (
+                    <button
+                      onClick={() => {
+                        const campCopy = { ...selectedCampaignRecipients };
+                        setSelectedCampaignRecipients(null);
+                        if (campCopy.estado === 'Programado') {
+                          editarCampanaProgramada(campCopy);
+                        } else {
+                          editBorrador(campCopy);
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(59, 130, 246, 0.12)',
+                        color: 'rgb(59, 130, 246)',
+                        border: '1px solid rgba(59, 130, 246, 0.25)',
+                        padding: '10px 20px',
+                        borderRadius: 10,
+                        cursor: 'pointer',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      ✏️ Editar Campaña
+                    </button>
+                  )}
+                </div>
+                <button 
+                  onClick={() => setSelectedCampaignRecipients(null)}
+                  style={{
+                    background: theme.primary,
+                    color: '#fff',
+                    border: 'none',
+                    padding: '10px 22px',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                    fontWeight: 800,
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  Cerrar
+                </button>
+              </footer>
             </div>
-            <footer style={{
-              padding: '16px 24px',
-              borderTop: `1px solid ${theme.border}`,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)'
-            }}>
-              <button 
-                onClick={() => setSelectedCampaignRecipients(null)}
-                style={{
-                  background: theme.primary,
-                  color: '#fff',
-                  border: 'none',
-                  padding: '10px 20px',
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  fontWeight: 800,
-                  fontSize: '0.85rem'
-                }}
-              >
-                Entendido
-              </button>
-            </footer>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
