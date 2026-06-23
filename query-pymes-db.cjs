@@ -6,20 +6,19 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function run() {
   try {
-    console.log("Fetching profiles from Pymes DB...");
-    const { data, error } = await supabase
-      .from('perfiles')
-      .select('*')
-      .limit(10);
+    console.log("Fetching empresas_gestionadas...");
+    const { data: companies, error: errComp } = await supabase
+      .from('empresas_gestionadas')
+      .select('*');
       
-    if (error) {
-      console.error("Error fetching profiles:", error);
+    if (errComp) {
+      console.error("Error fetching companies:", errComp);
       return;
     }
     
-    console.log("Profiles found:", data.length);
-    data.forEach(p => {
-      console.log(`ID: ${p.id}, id_usuario: ${p.id_usuario}, Nombre: ${p.nombre_completo}, Email: ${p.email}, Rol: ${p.rol}, es_admin: ${p.es_admin}`);
+    console.log("Companies found:", companies.length);
+    companies.forEach(c => {
+      console.log(`ID: ${c.id}, Nombre: ${c.nombre_empresa}, RUC: ${c.ruc_empresa}, id_usuario (Owner): ${c.id_usuario}`);
     });
   } catch (err) {
     console.error("Unexpected error:", err);
