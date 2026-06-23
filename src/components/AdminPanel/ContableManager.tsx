@@ -11,6 +11,8 @@ export const ContableManager = () => {
     const [accountants, setAccountants] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas'>('contadores');
+    const [companySearchTerm, setCompanySearchTerm] = useState('');
     
     // Auth Pymes
     const [session, setSession] = useState<any>(null);
@@ -20,6 +22,8 @@ export const ContableManager = () => {
     const [error, setError] = useState('');
 
     const [counts, setCounts] = useState<any>({});
+    const [empresas, setEmpresas] = useState<Record<string, any[]>>({});
+    const [allCompanies, setAllCompanies] = useState<any[]>([]);
     const [impersonateModal, setImpersonateModal] = useState<{
         isOpen: boolean;
         email: string;
@@ -57,7 +61,7 @@ export const ContableManager = () => {
         }
     };
 
-    const { data: queryData, isLoading: isFetchingAcc } = useQuery({
+    const { data: queryData, isLoading: isFetchingAcc, refetch } = useQuery({
         queryKey: ['accountantsData'],
         enabled: !!session,
         queryFn: async () => {
@@ -69,14 +73,22 @@ export const ContableManager = () => {
 
             const profiles = data || [];
             const newCounts: any = {};
+            const newEmpresas: any = {};
             for (const acc of profiles) {
-                const { count } = await supabaseContable
+                const { data: empData } = await supabaseContable
                     .from('empresas_gestionadas')
-                    .select('*', { count: 'exact', head: true })
+                    .select('id, nombre_empresa, ruc_empresa, permiso_reportes_pdf, permiso_descarga_ats, permiso_comunicacion_cliente')
                     .eq('id_usuario', acc.id_usuario);
-                newCounts[acc.id_usuario] = count || 0;
+                newCounts[acc.id_usuario] = empData?.length || 0;
+                newEmpresas[acc.id_usuario] = empData || [];
             }
-            return { profiles, counts: newCounts };
+
+            const { data: allCompanies, error: errAll } = await supabaseContable
+                .from('empresas_gestionadas')
+                .select('*')
+                .order('nombre_empresa');
+
+            return { profiles, counts: newCounts, empresas: newEmpresas, allCompanies: allCompanies || [] };
         }
     });
 
@@ -84,6 +96,8 @@ export const ContableManager = () => {
         if (queryData) {
             setAccountants(queryData.profiles);
             setCounts(queryData.counts);
+            setEmpresas(queryData.empresas || {});
+            setAllCompanies(queryData.allCompanies || []);
         }
     }, [queryData]);
 
@@ -117,6 +131,11 @@ export const ContableManager = () => {
     };
 
     const updateLimit = async (userId: string, newLimit: number) => {
+        const usage = counts[userId] || 0;
+        if (newLimit < usage) {
+            alert(`⚠️ No puedes establecer un cupo menor a la cantidad de clientes actuales (${usage}).`);
+            return;
+        }
         const { error: updateError } = await supabaseContable
             .from('perfiles')
             .update({ limite_empresas: newLimit })
@@ -127,6 +146,54 @@ export const ContableManager = () => {
             alert("✅ Límite de empresas actualizado!");
         } else {
             alert("❌ Error: " + updateError.message);
+        }
+    };
+
+    const reassignCompany = async (companyId: string, newOwnerId: string) => {
+        if (!newOwnerId) return;
+        if (!window.confirm("¿Estás seguro de reasignar esta empresa a otro contador?")) return;
+        
+        setLoading(true);
+        try {
+            const { error: updateError } = await supabaseContable
+                .from('empresas_gestionadas')
+                .update({ id_usuario: newOwnerId })
+                .eq('id', companyId);
+                
+            if (updateError) throw updateError;
+            
+            alert("✅ Empresa reasignada con éxito!");
+            await refetch();
+        } catch (err: any) {
+            alert("❌ Error al reasignar: " + (err.message || err));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateCompanyPermission = async (companyId: string, ownerId: string, field: string, value: boolean) => {
+        setLoading(true);
+        try {
+            const { error: updateError } = await supabaseContable
+                .from('empresas_gestionadas')
+                .update({ [field]: value })
+                .eq('id', companyId);
+                
+            if (updateError) throw updateError;
+            
+            // Actualizar estado localmente
+            setEmpresas(prev => {
+                const list = prev[ownerId] || [];
+                return {
+                    ...prev,
+                    [ownerId]: list.map(emp => emp.id === companyId ? { ...emp, [field]: value } : emp)
+                };
+            });
+            setAllCompanies(prev => prev.map(c => c.id === companyId ? { ...c, [field]: value } : c));
+        } catch (err: any) {
+            alert("❌ Error al actualizar permiso: " + (err.message || err));
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -229,7 +296,7 @@ export const ContableManager = () => {
 
     return (
         <div style={{ animation: 'fadeIn 0.5s ease' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
                 <div>
                     <h2 style={{ margin: 0, fontSize: '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Gestión de Usuarios Pymes</h2>
                     <p style={{ color: theme.textSec, marginTop: 4 }}>Control maestro de perfiles contables para el módulo Prospera Pymes</p>
@@ -242,134 +309,395 @@ export const ContableManager = () => {
                 </button>
             </div>
 
-            <div style={{ ...cardStyle, display: 'flex', gap: 12 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
-                <input 
-                    type="text" 
-                    placeholder="Filtrar por nombre, Razón Social, email o RUC..." 
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    style={{ ...inputStyle, flex: 1, border: 'none' }}
-                />
+            {/* Selector de sub-pestañas */}
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1px solid ${theme.border}`, paddingBottom: 16 }}>
+                <button
+                    onClick={() => setActiveSubTab('contadores')}
+                    style={{
+                        padding: '10px 20px',
+                        borderRadius: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        transition: 'all 0.2s',
+                        background: activeSubTab === 'contadores' ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                        color: activeSubTab === 'contadores' ? '#fff' : theme.textSec,
+                        boxShadow: activeSubTab === 'contadores' ? `0 4px 15px ${theme.primary}30` : 'none'
+                    }}
+                >
+                    💼 Gestión de Contadores
+                </button>
+                <button
+                    onClick={() => setActiveSubTab('empresas')}
+                    style={{
+                        padding: '10px 20px',
+                        borderRadius: 12,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '0.85rem',
+                        fontWeight: 800,
+                        transition: 'all 0.2s',
+                        background: activeSubTab === 'empresas' ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                        color: activeSubTab === 'empresas' ? '#fff' : theme.textSec,
+                        boxShadow: activeSubTab === 'empresas' ? `0 4px 15px ${theme.primary}30` : 'none'
+                    }}
+                >
+                    🏢 Clientes (Empresas)
+                </button>
             </div>
 
-            {loading && accountants.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: theme.textSec, fontWeight: 700 }}>SINCRONIZANDO CON SUPABASE PYMES...</div>
-            ) : accountants.length === 0 ? (
-                <div style={{ ...cardStyle, textAlign: 'center', padding: 40, border: `2px dashed ${theme.border}` }}>
-                    <p style={{ color: theme.textSec, fontWeight: 800 }}>No se encontraron perfiles contables registrados.</p>
-                </div>
+            {activeSubTab === 'contadores' ? (
+                <>
+                    <div style={{ ...cardStyle, display: 'flex', gap: 12, marginBottom: 24 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
+                        <input 
+                            type="text" 
+                            placeholder="Filtrar por nombre, Razón Social, email o RUC..." 
+                            value={searchTerm}
+                            onChange={e => setSearchTerm(e.target.value)}
+                            style={{ ...inputStyle, flex: 1, border: 'none' }}
+                        />
+                    </div>
+
+                    {loading && accountants.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 40, color: theme.textSec, fontWeight: 700 }}>SINCRONIZANDO CON SUPABASE PYMES...</div>
+                    ) : accountants.length === 0 ? (
+                        <div style={{ ...cardStyle, textAlign: 'center', padding: 40, border: `2px dashed ${theme.border}` }}>
+                            <p style={{ color: theme.textSec, fontWeight: 800 }}>No se encontraron perfiles contables registrados.</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 20 }}>
+                            {filtered.map(acc => {
+                                const usage = counts[acc.id_usuario] || 0;
+                                const limit = acc.limite_empresas || 1;
+                                const price = acc.precio_por_cliente || 0;
+                                const totalActual = usage * price;
+                                const totalProyectado = limit * price;
+
+                                return (
+                                    <div key={acc.id_usuario} style={cardStyle}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                                            <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
+                                                {acc.email?.charAt(0).toUpperCase() || '?'}
+                                            </div>
+                                            <div style={{ flex: 1, overflow: 'hidden' }}>
+                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>NOMBRE COMPLETO</label>
+                                                <input 
+                                                    defaultValue={acc.nombre_completo || 'Sin Nombre'}
+                                                    onBlur={e => { if(e.target.value !== acc.nombre_completo) updateField(acc.id_usuario, 'nombre_completo', e.target.value) }}
+                                                    style={{ ...inputStyle, width: '100%', fontWeight: 900, fontSize: '1.05rem' }}
+                                                />
+                                                <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: 6 }}>
+                                                <button 
+                                                    onClick={() => handleResetPassword(acc.email)}
+                                                    title="Restablecer Contraseña"
+                                                    style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
+                                                >
+                                                    <Lock size={16} />
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleImpersonate(acc.email)}
+                                                    title="Ver como Usuario"
+                                                    style={{ background: '#8b5cf615', color: '#8b5cf6', border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RAZÓN SOCIAL</label>
+                                                <input 
+                                                    defaultValue={acc.razon_social || ''}
+                                                    placeholder="Nombre comercial..."
+                                                    onBlur={e => { if(e.target.value !== acc.razon_social) updateField(acc.id_usuario, 'razon_social', e.target.value) }}
+                                                    style={{ ...inputStyle, width: '100%' }}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RUC</label>
+                                                <input 
+                                                    defaultValue={acc.ruc_profesional || ''}
+                                                    onBlur={e => { if(e.target.value !== acc.ruc_profesional) updateField(acc.id_usuario, 'ruc_profesional', e.target.value) }}
+                                                    style={{ ...inputStyle, width: '100%' }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div style={{ background: theme.bg, padding: 16, borderRadius: 16, border: `1px solid ${theme.border}` }}>
+                                            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>REGLA DE COBRO ($)</label>
+                                                    <input 
+                                                        type="number"
+                                                        defaultValue={acc.precio_por_cliente || 0}
+                                                        onBlur={e => {
+                                                            const val = parseFloat(e.target.value);
+                                                            if (val !== acc.precio_por_cliente) updateField(acc.id_usuario, 'precio_por_cliente', val);
+                                                        }}
+                                                        style={{ ...inputStyle, width: '100%', fontWeight: 800, color: theme.primary }}
+                                                    />
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>CUPO MÁXIMO</label>
+                                                    <input 
+                                                        type="number"
+                                                        defaultValue={limit}
+                                                        min={usage}
+                                                        onBlur={e => {
+                                                            const val = parseInt(e.target.value);
+                                                            const usage = counts[acc.id_usuario] || 0;
+                                                            if (val < usage) {
+                                                                alert(`⚠️ El cupo mínimo permitido es ${usage} (clientes en uso).`);
+                                                                e.target.value = limit.toString(); // Revertir visualmente
+                                                                return;
+                                                            }
+                                                            if (val !== limit) updateLimit(acc.id_usuario, val);
+                                                        }}
+                                                        style={{ ...inputStyle, width: '100%', fontWeight: 800 }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${theme.border}`, fontSize: '0.85rem' }}>
+                                                <span style={{ color: theme.textSec }}>Clientes en uso:</span>
+                                                <span style={{ fontWeight: 800, color: usage > limit ? theme.danger : theme.text }}>{usage} / {limit}</span>
+                                            </div>
+
+                                            {/* Listado de Empresas Colapsable con switches de permisos */}
+                                            {usage > 0 && (
+                                                <div style={{ marginTop: 2, marginBottom: 10 }}>
+                                                    <details style={{ cursor: 'pointer' }}>
+                                                        <summary style={{ fontSize: '0.78rem', color: theme.primary, fontWeight: 700, outline: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                            <span>📁 Ver listado de clientes y permisos</span>
+                                                        </summary>
+                                                        <div style={{ 
+                                                            marginTop: 8, 
+                                                            padding: '8px 12px', 
+                                                            background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+                                                            borderRadius: 12,
+                                                            border: `1px solid ${theme.border}`,
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            gap: 12
+                                                        }}>
+                                                            {(empresas[acc.id_usuario] || []).map((emp: any, idx: number, arr: any[]) => (
+                                                                <div key={emp.id} style={{ 
+                                                                    display: 'flex', 
+                                                                    flexDirection: 'column',
+                                                                    gap: 6,
+                                                                    paddingBottom: idx === arr.length - 1 ? 0 : 8,
+                                                                    borderBottom: idx === arr.length - 1 ? 'none' : `1px solid ${theme.border}`
+                                                                }}>
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', gap: 10 }}>
+                                                                         <span style={{ fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                             🏢 {emp.nombre_empresa}
+                                                                         </span>
+                                                                         <span style={{ color: theme.textSec, fontFamily: 'monospace', flexShrink: 0 }}>
+                                                                             RUC: {emp.ruc_empresa}
+                                                                         </span>
+                                                                    </div>
+                                                                    {/* Switches de Licencias y Reasignación */}
+                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                                                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                                                            {[
+                                                                                { key: 'permiso_reportes_pdf', label: '📊 Reportes' },
+                                                                                { key: 'permiso_descarga_ats', label: '🧾 ATS' },
+                                                                                { key: 'permiso_comunicacion_cliente', label: '✉️ Mailer' }
+                                                                            ].map(p => {
+                                                                                const active = !!emp[p.key];
+                                                                                return (
+                                                                                    <button
+                                                                                        key={p.key}
+                                                                                        onClick={(e) => {
+                                                                                            e.preventDefault();
+                                                                                            e.stopPropagation();
+                                                                                            updateCompanyPermission(emp.id, acc.id_usuario, p.key, !active);
+                                                                                        }}
+                                                                                        style={{
+                                                                                            fontSize: '0.68rem',
+                                                                                            padding: '4px 8px',
+                                                                                            borderRadius: '6px',
+                                                                                            cursor: 'pointer',
+                                                                                            background: active ? theme.primary + '15' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                                                                                            color: active ? theme.primary : theme.textSec,
+                                                                                            fontWeight: active ? 800 : 500,
+                                                                                            border: active ? `1px solid ${theme.primary}40` : `1px solid ${theme.border}`,
+                                                                                            display: 'inline-flex',
+                                                                                            alignItems: 'center',
+                                                                                            gap: 4
+                                                                                        }}
+                                                                                    >
+                                                                                        {p.label}
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+
+                                                                        <select
+                                                                            value={emp.id_usuario || ''}
+                                                                            onChange={e => reassignCompany(emp.id, e.target.value)}
+                                                                            onClick={e => e.stopPropagation()}
+                                                                            style={{
+                                                                                padding: '4px 8px',
+                                                                                borderRadius: '8px',
+                                                                                border: `1px solid ${theme.border}`,
+                                                                                background: theme.card,
+                                                                                color: theme.text,
+                                                                                fontSize: '0.68rem',
+                                                                                fontWeight: 700,
+                                                                                cursor: 'pointer',
+                                                                                outline: 'none',
+                                                                                maxWidth: '140px'
+                                                                            }}
+                                                                        >
+                                                                            <option value="">Reasignar...</option>
+                                                                            {accountants.map(a => (
+                                                                                <option key={a.id_usuario} value={a.id_usuario}>
+                                                                                    {a.nombre_completo}
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </details>
+                                                </div>
+                                            )}
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 900, fontSize: '0.9rem' }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ACTUAL</span>
+                                                    <span style={{ color: theme.primary }}>${totalActual.toFixed(2)}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                                                    <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ESPERADO</span>
+                                                    <span style={{ color: theme.textSec }}>${totalProyectado.toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 20 }}>
-                    {filtered.map(acc => {
-                        const usage = counts[acc.id_usuario] || 0;
-                        const limit = acc.limite_empresas || 1;
-                        const price = acc.precio_por_cliente || 0;
-                        const totalActual = usage * price;
-                        const totalProyectado = limit * price;
+                /* VISTA DE TABLA REPORTE DE EMPRESAS - SOLO LECTURA */
+                <>
+                    <div style={{ ...cardStyle, display: 'flex', gap: 12, marginBottom: 24 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
+                        <input 
+                            type="text" 
+                            placeholder="Buscar empresa por nombre, RUC o contador..." 
+                            value={companySearchTerm}
+                            onChange={e => setCompanySearchTerm(e.target.value)}
+                            style={{ ...inputStyle, flex: 1, border: 'none' }}
+                        />
+                    </div>
 
-                        return (
-                            <div key={acc.id_usuario} style={cardStyle}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                                    <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                                        {acc.email?.charAt(0).toUpperCase() || '?'}
-                                    </div>
-                                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>NOMBRE COMPLETO</label>
-                                        <input 
-                                            defaultValue={acc.nombre_completo || 'Sin Nombre'}
-                                            onBlur={e => { if(e.target.value !== acc.nombre_completo) updateField(acc.id_usuario, 'nombre_completo', e.target.value) }}
-                                            style={{ ...inputStyle, width: '100%', fontWeight: 900, fontSize: '1.05rem' }}
-                                        />
-                                        <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
-                                    </div>
-                                    <div style={{ display: 'flex', gap: 6 }}>
-                                        <button 
-                                            onClick={() => handleResetPassword(acc.email)}
-                                            title="Restablecer Contraseña"
-                                            style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
-                                        >
-                                            <Lock size={16} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleImpersonate(acc.email)}
-                                            title="Ver como Usuario"
-                                            style={{ background: '#8b5cf615', color: '#8b5cf6', border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
-                                        >
-                                            <Eye size={16} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                                    <div>
-                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RAZÓN SOCIAL</label>
-                                        <input 
-                                            defaultValue={acc.razon_social || ''}
-                                            placeholder="Nombre comercial..."
-                                            onBlur={e => { if(e.target.value !== acc.razon_social) updateField(acc.id_usuario, 'razon_social', e.target.value) }}
-                                            style={{ ...inputStyle, width: '100%' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RUC</label>
-                                        <input 
-                                            defaultValue={acc.ruc_profesional || ''}
-                                            onBlur={e => { if(e.target.value !== acc.ruc_profesional) updateField(acc.id_usuario, 'ruc_profesional', e.target.value) }}
-                                            style={{ ...inputStyle, width: '100%' }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div style={{ background: theme.bg, padding: 16, borderRadius: 16, border: `1px solid ${theme.border}` }}>
-                                    <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>REGLA DE COBRO ($)</label>
-                                            <input 
-                                                type="number"
-                                                defaultValue={acc.precio_por_cliente || 0}
-                                                onBlur={e => {
-                                                    const val = parseFloat(e.target.value);
-                                                    if (val !== acc.precio_por_cliente) updateField(acc.id_usuario, 'precio_por_cliente', val);
-                                                }}
-                                                style={{ ...inputStyle, width: '100%', fontWeight: 800, color: theme.primary }}
-                                            />
-                                        </div>
-                                        <div style={{ flex: 1 }}>
-                                            <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>CUPO MÁXIMO</label>
-                                            <input 
-                                                type="number"
-                                                defaultValue={limit}
-                                                onBlur={e => {
-                                                    const val = parseInt(e.target.value);
-                                                    if (val !== limit) updateField(acc.id_usuario, 'limite_empresas', val);
-                                                }}
-                                                style={{ ...inputStyle, width: '100%', fontWeight: 800 }}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${theme.border}`, fontSize: '0.85rem' }}>
-                                        <span style={{ color: theme.textSec }}>Clientes en uso:</span>
-                                        <span style={{ fontWeight: 800, color: usage > limit ? theme.danger : theme.text }}>{usage} / {limit}</span>
-                                    </div>
-
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 900, fontSize: '0.9rem' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ACTUAL</span>
-                                            <span style={{ color: theme.primary }}>${totalActual.toFixed(2)}</span>
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-                                            <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ESPERADO</span>
-                                            <span style={{ color: theme.textSec }}>${totalProyectado.toFixed(2)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                    {allCompanies.length === 0 ? (
+                        <div style={{ ...cardStyle, textAlign: 'center', padding: 40, border: `2px dashed ${theme.border}` }}>
+                            <p style={{ color: theme.textSec, fontWeight: 800 }}>No hay empresas registradas.</p>
+                        </div>
+                    ) : (
+                        <div style={{ ...cardStyle, overflowX: 'auto', padding: 0, borderRadius: 20, border: `1px solid ${theme.border}` }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: `1px solid ${theme.border}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
+                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>EMPRESA</th>
+                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>RUC</th>
+                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>LOGO</th>
+                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>CONTADOR ASOCIADO</th>
+                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px', textAlign: 'center' }}>PERMISOS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {allCompanies.filter(c => {
+                                        const owner = accountants.find(a => a.id_usuario === c.id_usuario);
+                                        const search = companySearchTerm.toLowerCase();
+                                        return (
+                                            (c.nombre_empresa || '').toLowerCase().includes(search) ||
+                                            (c.ruc_empresa || '').toLowerCase().includes(search) ||
+                                            (owner?.nombre_completo || '').toLowerCase().includes(search) ||
+                                            (owner?.email || '').toLowerCase().includes(search)
+                                        );
+                                    }).map((c, idx) => {
+                                        const ownerProfile = accountants.find(a => a.id_usuario === c.id_usuario);
+                                        const hasLogo = !!c.logo_url;
+                                        
+                                        return (
+                                            <tr key={c.id} style={{ borderBottom: `1px solid ${theme.border}`, background: idx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)') }}>
+                                                <td style={{ padding: '16px 20px', fontWeight: 800, color: theme.text }}>
+                                                    🏢 {c.nombre_empresa}
+                                                </td>
+                                                <td style={{ padding: '16px 20px', fontFamily: 'monospace', color: theme.textSec }}>
+                                                    {c.ruc_empresa || 'N/A'}
+                                                </td>
+                                                <td style={{ padding: '16px 20px' }}>
+                                                    {hasLogo ? (
+                                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', background: '#10b98115', color: '#10b981', border: '1px solid #10b98130' }}>
+                                                            ✓ Con Logo
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: theme.textSec, border: `1px solid ${theme.border}` }}>
+                                                            ✗ Sin Logo
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: '16px 20px' }}>
+                                                    {ownerProfile ? (
+                                                        <div>
+                                                            <div style={{ fontWeight: 750, fontSize: '0.85rem' }}>{ownerProfile.nombre_completo}</div>
+                                                            <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{ownerProfile.email}</div>
+                                                        </div>
+                                                    ) : (
+                                                        <span style={{ color: theme.danger, fontWeight: 700, fontSize: '0.82rem' }}>⚠️ ID Huérfano: {c.id_usuario}</span>
+                                                    )}
+                                                </td>
+                                                <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                                        {[
+                                                            { key: 'permiso_reportes_pdf', label: '📊 Reportes' },
+                                                            { key: 'permiso_descarga_ats', label: '🧾 ATS' },
+                                                            { key: 'permiso_comunicacion_cliente', label: '✉️ Mailer' }
+                                                        ].map(p => {
+                                                            const active = !!c[p.key];
+                                                            return (
+                                                                <span
+                                                                    key={p.key}
+                                                                    style={{
+                                                                        fontSize: '0.68rem',
+                                                                        padding: '4px 8px',
+                                                                        borderRadius: '6px',
+                                                                        background: active ? theme.primary + '15' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                                                                        color: active ? theme.primary : theme.textSec,
+                                                                        fontWeight: active ? 800 : 500,
+                                                                        border: active ? `1px solid ${theme.primary}30` : `1px solid ${theme.border}`,
+                                                                        opacity: active ? 1 : 0.4,
+                                                                        userSelect: 'none'
+                                                                    }}
+                                                                >
+                                                                    {p.label}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </>
             )}
+
             {/* MODAL DE IMPERSONACIÓN PREMIUM */}
             {impersonateModal && impersonateModal.isOpen && (
               <div style={{
