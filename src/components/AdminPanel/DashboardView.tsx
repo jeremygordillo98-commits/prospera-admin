@@ -10,8 +10,6 @@ import {
 import CohortAnalysis from './CohortAnalysis';
 
 const IconCalendar = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
-const IconEdit = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
-const IconCheck = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>;
 
 export interface PerfilUsuario {
   id?: string;
@@ -35,16 +33,15 @@ export interface PerfilUsuario {
 
 export default function DashboardView() {
   const { theme, isDark } = useTheme();
-  const { precios: preciosDB, updatePrecios, showToast } = useData();
+  const { precios: preciosDB } = useData();
   
-  // --- ESTADO DE PRECIOS EDITABLE ---
+  // --- ESTADO DE PRECIOS ---
   const [precios, setPrecios] = useState<PreciosConfig>(preciosDB);
 
   useEffect(() => {
     setPrecios(preciosDB);
   }, [preciosDB]);
 
-  const [isEditing, setIsEditing] = useState(false);
   const [perfilesRaw, setPerfilesRaw] = useState<PerfilUsuario[]>([]); 
   const [stats, setStats] = useState({ total: 0, ultra: 0, pro: 0, basico: 0, usersWithPending: 0, valorEstimado: 0 });
   const [plansData, setPlansData] = useState<any[]>([]);
@@ -161,15 +158,6 @@ export default function DashboardView() {
 
 
 
-  const handlePrecioChange = (key: keyof PreciosConfig, value: string) => {
-    setPrecios(prev => ({ ...prev, [key]: parseFloat(value) || 0 }));
-  };
-
-  const handleSavePrecios = async () => {
-      await updatePrecios(precios);
-      setIsEditing(false);
-  };
-
   const cardStyle = {
     background: theme.card,
     border: `1px solid ${theme.border}`,
@@ -185,19 +173,6 @@ export default function DashboardView() {
     borderLeft: `6px solid ${lineColor}`,
     background: isDark ? `linear-gradient(145deg, ${theme.card}, rgba(30, 41, 59, 0.4))` : theme.card
   });
-
-  const inputStyle = {
-    width: '70px',
-    background: theme.inputBg,
-    color: theme.text,
-    border: `1px solid ${theme.border}`,
-    borderRadius: '10px',
-    padding: '6px 10px',
-    fontSize: '0.85rem',
-    textAlign: 'right' as const,
-    fontWeight: 800,
-    outline: 'none'
-  };
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease', paddingBottom: '60px' }}>
@@ -259,17 +234,11 @@ export default function DashboardView() {
 
       {/* DESGLOSE DE PRECIOS EDITABLE */}
       <div style={{ position: 'relative', marginBottom: '40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 900 }}>Estructura de Precios</h3>
-            <button 
-              onClick={() => {
-                  if (isEditing) handleSavePrecios();
-                  else setIsEditing(true);
-              }}
-              style={{ background: isEditing ? theme.primary : theme.inputBg, color: isEditing ? (isDark ? '#000' : '#fff') : theme.text, border: `1px solid ${theme.border}`, borderRadius: '12px', padding: '10px 20px', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', zIndex: 10, transition: 'all 0.2s' }}
-            >
-              {isEditing ? <><IconCheck /> GUARDAR</> : <><IconEdit /> AJUSTAR TARIFAS</>}
-            </button>
+            <span style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: '4px' }}>
+              Las tarifas de suscripción son informativas aquí. Para modificarlas, diríjase a la pestaña de <strong>Sistema</strong>.
+            </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -283,11 +252,7 @@ export default function DashboardView() {
             ].map(item => (
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{item.label}</span>
-                {isEditing ? (
-                  <input type="number" step="0.01" value={precios[item.key as keyof typeof precios]} onChange={(e) => handlePrecioChange(item.key as keyof typeof precios, e.target.value)} style={inputStyle} />
-                ) : (
-                  <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios].toFixed(2)}</b>
-                )}
+                <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios]?.toFixed(2)}</b>
               </div>
             ))}
           </div>
@@ -303,11 +268,7 @@ export default function DashboardView() {
             ].map(item => (
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{item.label}</span>
-                {isEditing ? (
-                  <input type="number" step="0.01" value={precios[item.key as keyof typeof precios]} onChange={(e) => handlePrecioChange(item.key as keyof typeof precios, e.target.value)} style={inputStyle} />
-                ) : (
-                  <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios].toFixed(2)}</b>
-                )}
+                <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios]?.toFixed(2)}</b>
               </div>
             ))}
           </div>
@@ -323,11 +284,7 @@ export default function DashboardView() {
             ].map(item => (
               <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{item.label}</span>
-                {isEditing ? (
-                  <input type="number" step="0.01" value={precios[item.key as keyof typeof precios]} onChange={(e) => handlePrecioChange(item.key as keyof typeof precios, e.target.value)} style={inputStyle} />
-                ) : (
-                  <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios].toFixed(2)}</b>
-                )}
+                <b style={{ fontSize: '1rem', fontWeight: 800 }}>${precios[item.key as keyof typeof precios]?.toFixed(2)}</b>
               </div>
             ))}
           </div>

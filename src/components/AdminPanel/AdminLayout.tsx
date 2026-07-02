@@ -16,8 +16,6 @@ const IconChart = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="no
 const IconMessage = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>;
 const IconLogOut = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 const IconSettings = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>;
-const IconChevronLeft = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>;
-const IconChevronRight = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>;
 
 const IconCalculator = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="16" y1="14" x2="16" y2="18" /><path d="M16 10h.01" /><path d="M12 10h.01" /><path d="M8 10h.01" /><path d="M12 14h.01" /><path d="M8 14h.01" /><path d="M12 18h.01" /><path d="M8 18h.01" /></svg>;
 const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>;
@@ -32,7 +30,6 @@ export default function AdminLayout() {
     localStorage.setItem('admin_active_tab', activeTab);
   }, [activeTab]);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -51,12 +48,8 @@ export default function AdminLayout() {
   ];
 
   const getNavItemStyle = (isActive: boolean) => ({
-    background: isActive
-      ? `linear-gradient(90deg, ${theme.primary}15 0%, transparent 100%)`
-      : 'transparent',
-    borderLeft: isActive ? `4px solid ${theme.primary}` : '4px solid transparent',
+    background: isActive ? `${theme.primary}15` : 'transparent',
     color: isActive ? theme.primary : theme.textSec,
-    opacity: isActive ? 1 : 0.7,
   });
 
   const handleLogout = async () => {
@@ -65,94 +58,102 @@ export default function AdminLayout() {
 
   return (
     <div
-      className="flex flex-col lg:flex-row min-h-screen font-sans"
+      className="flex flex-col min-h-screen font-sans"
       style={{
         background: theme.bg,
         color: theme.text,
       }}
     >
 
-      {/* SIDEBAR / HEADER */}
+      {/* HEADER / TOP NAVIGATION */}
       <aside
-        className={`flex flex-col sticky top-0 z-50 shrink-0 transition-all duration-300 ease-in-out lg:h-screen lg:border-b-0 shadow-sm lg:shadow-none ${isMobile ? "w-full" : isCollapsed ? "w-[80px]" : "w-[260px]"
-          }`}
+        className="sticky top-0 z-50 w-full transition-all duration-300 ease-in-out shadow-sm shrink-0"
         style={{
-          background: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          background: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderRight: isMobile ? 'none' : `1px solid ${theme.border}`,
-          borderBottom: isMobile ? `1px solid ${theme.border}` : 'none',
+          borderBottom: `1px solid ${theme.border}`,
         }}
       >
-
-        {/* LOGO SECCIÓN */}
-        <div className="py-4 px-5 lg:py-8 lg:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
-              style={{
-                boxShadow: `0 8px 16px ${theme.primary}40`,
-              }}>
-              <img src="/admin-logo.png" alt="Admin" className="w-full h-full object-cover" />
-            </div>
-            {!isCollapsed && (
-              <div className="font-extrabold text-[1.1rem] tracking-tight whitespace-nowrap overflow-hidden">
+        <div className="max-w-[1600px] mx-auto w-full px-4 py-3 lg:px-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          
+          {/* LOGO & MOBILE LOGOUT */}
+          <div className="flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden shrink-0"
+                style={{
+                  boxShadow: `0 8px 16px ${theme.primary}40`,
+                }}
+              >
+                <img src="/admin-logo.png" alt="Admin" className="w-full h-full object-cover" />
+              </div>
+              <div className="font-extrabold text-[1.1rem] tracking-tight whitespace-nowrap">
                 PROSPERA <span className="text-[0.65rem] align-middle px-2 py-0.5 rounded-full ml-1.5 font-extrabold" style={{ color: theme.primary, background: theme.primary + '15' }}>ROOT</span>
               </div>
-            )}
-          </div>
+            </div>
 
-          {isMobile && (
-            <button onClick={handleLogout} className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer border-none" style={{ background: theme.danger + '15', color: theme.danger }}>
+            {/* Logout button for smaller screens (hidden on lg) */}
+            <button 
+              onClick={handleLogout} 
+              className="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer border-none" 
+              style={{ background: theme.danger + '15', color: theme.danger }}
+            >
               <IconLogOut />
             </button>
-          )}
-        </div>
-
-        {/* NAVEGACIÓN */}
-        <nav className="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible px-2.5 pb-2.5 lg:px-0 lg:py-2.5 gap-2 lg:gap-0" style={{ scrollbarWidth: 'none' }}>
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
-              title={isCollapsed ? item.label : ""}
-              className={isMobile
-                ? "flex flex-col items-center gap-1 p-2.5 border-none rounded-xl text-[0.7rem] font-extrabold flex-1 min-w-[80px] transition-all duration-200"
-                : `flex items-center w-full py-3.5 border-none text-[0.9rem] cursor-pointer text-left transition-all duration-300 ease-out lg:rounded-r-xl lg:my-0.5 nav-item-admin ${isCollapsed ? "justify-center px-0" : "gap-3 px-5"
-                }`}
-              style={isMobile ? {
-                background: activeTab === item.id ? theme.primary + '15' : 'transparent',
-                color: activeTab === item.id ? theme.primary : theme.textSec,
-              } : { ...getNavItemStyle(activeTab === item.id), fontWeight: activeTab === item.id ? 800 : 600 }}
-            >
-              <div className="shrink-0" style={{ transform: activeTab === item.id ? 'scale(1.1)' : 'scale(1)', transition: 'transform 0.2s' }}>
-                {item.icon}
-              </div>
-              {(!isCollapsed || isMobile) && <span className="whitespace-nowrap overflow-hidden">{item.label}</span>}
-            </button>
-          ))}
-        </nav>
-
-        {!isMobile && (
-          <div className={`p-4 transition-all duration-300 ${isCollapsed ? "flex flex-col items-center" : ""}`}>
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="w-full mb-4 border-none flex items-center gap-3 py-2.5 px-3 text-[0.7rem] font-extrabold cursor-pointer rounded-xl transition-all duration-200 hover:opacity-100 opacity-60"
-              style={{ background: theme.primary + '10', color: theme.primary, justifyContent: isCollapsed ? 'center' : 'flex-start' }}
-            >
-              {isCollapsed ? <IconChevronRight /> : <><IconChevronLeft /> COLAPSAR</>}
-            </button>
-
-            <button onClick={handleLogout} className={`w-full border-none flex items-center py-3.5 text-[0.9rem] font-bold cursor-pointer rounded-xl transition-all duration-200 ${isCollapsed ? "justify-center px-0" : "gap-3 px-4"}`} style={{ background: theme.danger + '10', color: theme.danger }} onMouseOver={(e) => e.currentTarget.style.background = `${theme.danger}20`} onMouseOut={(e) => e.currentTarget.style.background = `${theme.danger}10`}>
-              <IconLogOut /> {!isCollapsed && "Cerrar Sesión"}
-            </button>
-            {!isCollapsed && (
-              <div className="text-[0.65rem] text-center mt-5 font-bold tracking-widest opacity-50" style={{ color: theme.textSec }}>
-                ADMIN CORE v4.0
-              </div>
-            )}
           </div>
-        )}
+
+          {/* NAVEGACIÓN - horizontal scroll on mobile, flex row on desktop */}
+          <nav 
+            className="flex-1 flex flex-row items-center overflow-x-auto lg:overflow-x-visible py-1.5 px-0.5 gap-2 lg:justify-center" 
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {menuItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className="flex items-center gap-2 px-4 py-2.5 border-none text-[0.85rem] lg:text-[0.9rem] cursor-pointer text-left transition-all duration-300 ease-out rounded-xl nav-item-admin shrink-0"
+                  style={{
+                    ...getNavItemStyle(isActive),
+                    fontWeight: isActive ? 800 : 600,
+                  }}
+                >
+                  <div 
+                    className="shrink-0" 
+                    style={{ 
+                      transform: isActive ? 'scale(1.1)' : 'scale(1)', 
+                      transition: 'transform 0.2s',
+                      color: isActive ? theme.primary : theme.textSec,
+                    }}
+                  >
+                    {item.icon}
+                  </div>
+                  <span className="whitespace-nowrap">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* DESKTOP LOGOUT & VERSION INFO */}
+          <div className="hidden lg:flex items-center gap-4 shrink-0">
+            <div className="text-[0.65rem] font-bold tracking-widest opacity-50 whitespace-nowrap" style={{ color: theme.textSec }}>
+              ADMIN CORE v4.0
+            </div>
+            <button 
+              onClick={handleLogout} 
+              className="border-none flex items-center gap-2 py-2 px-4 text-[0.9rem] font-bold cursor-pointer rounded-xl transition-all duration-200" 
+              style={{ background: theme.danger + '10', color: theme.danger }} 
+              onMouseOver={(e) => e.currentTarget.style.background = `${theme.danger}20`} 
+              onMouseOut={(e) => e.currentTarget.style.background = `${theme.danger}10`}
+            >
+              <IconLogOut />
+              <span>Cerrar Sesión</span>
+            </button>
+          </div>
+
+        </div>
       </aside>
 
       {/* CONTENIDO PRINCIPAL */}
@@ -171,8 +172,8 @@ export default function AdminLayout() {
       <style>
         {`
           @keyframes slideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
           }
           aside nav::-webkit-scrollbar { display: none; }
           .nav-item-admin:hover { opacity: 1; background: ${theme.primary}08; }
