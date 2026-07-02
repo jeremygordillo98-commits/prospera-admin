@@ -3,18 +3,33 @@ import { useTheme } from '../../context/ThemeContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { supabaseContable } from '../../services/supabaseContable';
+import { useData, PreciosConfig } from '../../context/DataContext';
 import { 
-  Sun, Moon, Activity, Database, Trash2, RefreshCw, CheckCircle, AlertTriangle, Play 
+  Sun, Moon, Activity, Database, Trash2, RefreshCw, CheckCircle, AlertTriangle, Play, Edit, Check, Settings
 } from 'lucide-react';
 
 export default function ConfigView() {
   const { theme, isDark, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+  const { precios: preciosDB, updatePrecios } = useData();
 
   const [diagnosing, setDiagnosing] = useState(false);
   const [b2cStatus, setB2cStatus] = useState<{ status: string; latency: number; error: string | null } | null>(null);
   const [b2bStatus, setB2bStatus] = useState<{ status: string; latency: number; error: string | null } | null>(null);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
+  // --- CONFIGURACIÓN DE PRECIOS ---
+  const [preciosEdit, setPreciosEdit] = useState<PreciosConfig>(preciosDB);
+  const [isEditingPrecios, setIsEditingPrecios] = useState(false);
+
+  useEffect(() => {
+    setPreciosEdit(preciosDB);
+  }, [preciosDB]);
+
+  // --- POLÍTICAS DE MANTENIMIENTO ---
+  const [retencionCampanas, setRetencionCampanas] = useState<number>(15);
+  const [retencionSoporte, setRetencionSoporte] = useState<number>(30);
+  const [isEditingMaint, setIsEditingMaint] = useState(false);
 
   const [rowCounts, setRowCounts] = useState<{
     b2c: { perfiles: number; transacciones: number; soporte_tickets: number; public_news: number };
@@ -88,8 +103,62 @@ export default function ConfigView() {
     setDiagnosing(false);
   };
 
+  const loadMaintConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('precios_config')
+        .select('*')
+        .in('id', ['maint_campanas_retencion', 'maint_soporte_retencion']);
+      
+      if (data) {
+        const campanasObj = data.find(c => c.id === 'maint_campanas_retencion');
+        const soporteObj = data.find(c => c.id === 'maint_soporte_retencion');
+        if (campanasObj) setRetencionCampanas(campanasObj.valor);
+        if (soporteObj) setRetencionSoporte(soporteObj.valor);
+      }
+    } catch (e) {
+      console.error("Error loading maintenance configs:", e);
+    }
+  };
+
+  const handleSaveMaint = async () => {
+    try {
+      const updates = [
+        { id: 'maint_campanas_retencion', valor: retencionCampanas },
+        { id: 'maint_soporte_retencion', valor: retencionSoporte }
+      ];
+      const { error } = await supabase.from('precios_config').upsert(updates);
+      if (error) throw error;
+      setActionMessage("Políticas de mantenimiento guardadas con éxito.");
+      setIsEditingMaint(false);
+      setTimeout(() => setActionMessage(null), 3500);
+    } catch (err: any) {
+      console.error("Error saving maintenance configs:", err);
+      setActionMessage("Error al guardar políticas de mantenimiento: " + err.message);
+      setTimeout(() => setActionMessage(null), 3500);
+    }
+  };
+
+  const handlePrecioChange = (key: keyof PreciosConfig, value: string) => {
+    setPreciosEdit(prev => ({ ...prev, [key]: parseFloat(value) || 0 }));
+  };
+
+  const handleSavePrecios = async () => {
+    try {
+      await updatePrecios(preciosEdit);
+      setIsEditingPrecios(false);
+      setActionMessage("Estructura de precios guardada con éxito.");
+      setTimeout(() => setActionMessage(null), 3500);
+    } catch (err: any) {
+      console.error("Error saving prices:", err);
+      setActionMessage("Error al guardar tarifas: " + err.message);
+      setTimeout(() => setActionMessage(null), 3500);
+    }
+  };
+
   useEffect(() => {
     runDiagnostics();
+    loadMaintConfigs();
   }, []);
 
   const handlePurgeCache = () => {
@@ -369,6 +438,266 @@ export default function ConfigView() {
               >
                 Limpiar Storage
               </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* SECCIÓN DE CONFIGURACIONES OPERATIVAS */}
+      <div style={{ marginTop: '45px', marginBottom: '25px' }}>
+        <h2 style={{ color: theme.text, margin: 0, fontWeight: 900, letterSpacing: '-0.5px' }}>💼 Configuraciones de Negocio</h2>
+        <p style={{ color: theme.textSec, fontSize: '0.85rem', margin: '5px 0 0 0' }}>Gestión de tarifas del ecosistema y reglas de retención automática de datos.</p>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        
+        {/* CARD DE PRECIOS */}
+        <div style={{ ...cardStyle, width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Settings size={18} style={{ color: theme.primary }} /> Estructura de Precios (Tarifas Globales)
+            </h3>
+            <button 
+              onClick={() => {
+                if (isEditingPrecios) handleSavePrecios();
+                else setIsEditingPrecios(true);
+              }}
+              style={{
+                background: isEditingPrecios ? theme.primary : theme.bg,
+                color: isEditingPrecios ? (isDark ? '#000' : '#fff') : theme.text,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '12px',
+                padding: '8px 16px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              {isEditingPrecios ? <><Check size={14} /> GUARDAR</> : <><Edit size={14} /> AJUSTAR TARIFAS</>}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            {/* GRUPO BÁSICO */}
+            <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+              <div style={{ width: '40px', height: '4px', background: '#3b82f6', borderRadius: '4px', marginBottom: '12px' }}></div>
+              <h4 style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 900, color: '#3b82f6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fase Iniciación</h4>
+              {[
+                { label: 'Presupuestos', key: 'presupuestos' },
+                { label: 'Recordatorios', key: 'recordatorios' }
+              ].map(item => (
+                <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.label}</span>
+                  {isEditingPrecios ? (
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={preciosEdit[item.key as keyof PreciosConfig]} 
+                      onChange={(e) => handlePrecioChange(item.key as keyof PreciosConfig, e.target.value)} 
+                      style={{
+                        width: '70px',
+                        background: theme.card,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '5px 8px',
+                        fontSize: '0.85rem',
+                        textAlign: 'right',
+                        fontWeight: 800,
+                        outline: 'none'
+                      }}
+                    />
+                  ) : (
+                    <b style={{ fontSize: '0.95rem', fontWeight: 800 }}>${preciosEdit[item.key as keyof PreciosConfig]?.toFixed(2)}</b>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* GRUPO PRO */}
+            <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+              <div style={{ width: '40px', height: '4px', background: '#10b981', borderRadius: '4px', marginBottom: '12px' }}></div>
+              <h4 style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 900, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fase Analítica</h4>
+              {[
+                { label: 'Conciliación', key: 'conciliacion' },
+                { label: 'Subcategorías', key: 'subcategorias' },
+                { label: 'Reportes Pro', key: 'reporte_patrimonio' }
+              ].map(item => (
+                <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.label}</span>
+                  {isEditingPrecios ? (
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={preciosEdit[item.key as keyof PreciosConfig]} 
+                      onChange={(e) => handlePrecioChange(item.key as keyof PreciosConfig, e.target.value)} 
+                      style={{
+                        width: '70px',
+                        background: theme.card,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '5px 8px',
+                        fontSize: '0.85rem',
+                        textAlign: 'right',
+                        fontWeight: 800,
+                        outline: 'none'
+                      }}
+                    />
+                  ) : (
+                    <b style={{ fontSize: '0.95rem', fontWeight: 800 }}>${preciosEdit[item.key as keyof PreciosConfig]?.toFixed(2)}</b>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* GRUPO ULTRA */}
+            <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+              <div style={{ width: '40px', height: '4px', background: '#c084fc', borderRadius: '4px', marginBottom: '12px' }}></div>
+              <h4 style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 900, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Fase Avanzada</h4>
+              {[
+                { label: 'IA Integral', key: 'chat' },
+                { label: 'Ingreso Mágico', key: 'magic' },
+                { label: 'Insights IA', key: 'insights' }
+              ].map(item => (
+                <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: `1px solid ${theme.border}`, alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.label}</span>
+                  {isEditingPrecios ? (
+                    <input 
+                      type="number" 
+                      step="0.01" 
+                      value={preciosEdit[item.key as keyof PreciosConfig]} 
+                      onChange={(e) => handlePrecioChange(item.key as keyof PreciosConfig, e.target.value)} 
+                      style={{
+                        width: '70px',
+                        background: theme.card,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '5px 8px',
+                        fontSize: '0.85rem',
+                        textAlign: 'right',
+                        fontWeight: 800,
+                        outline: 'none'
+                      }}
+                    />
+                  ) : (
+                    <b style={{ fontSize: '0.95rem', fontWeight: 800 }}>${preciosEdit[item.key as keyof PreciosConfig]?.toFixed(2)}</b>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* CARD DE POLÍTICAS DE MANTENIMIENTO */}
+        <div style={{ ...cardStyle, width: '100%', boxSizing: 'border-box' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Trash2 size={18} style={{ color: theme.danger }} /> Políticas de Mantenimiento (Mantenimiento Automático)
+            </h3>
+            <button 
+              onClick={() => {
+                if (isEditingMaint) handleSaveMaint();
+                else setIsEditingMaint(true);
+              }}
+              style={{
+                background: isEditingMaint ? theme.primary : theme.bg,
+                color: isEditingMaint ? (isDark ? '#000' : '#fff') : theme.text,
+                border: `1px solid ${theme.border}`,
+                borderRadius: '12px',
+                padding: '8px 16px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s'
+              }}
+            >
+              {isEditingMaint ? <><Check size={14} /> GUARDAR</> : <><Edit size={14} /> EDITAR POLÍTICAS</>}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+            {/* RETENCIÓN DE CAMPAÑAS */}
+            <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Retención de Campañas</div>
+                <div style={{ fontSize: '0.75rem', color: theme.textSec, marginTop: '4px', maxWidth: '240px' }}>
+                  Las campañas enviadas o con error se eliminarán automáticamente tras estos días.
+                </div>
+              </div>
+              <div>
+                {isEditingMaint ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      value={retencionCampanas} 
+                      onChange={(e) => setRetencionCampanas(parseInt(e.target.value) || 0)} 
+                      style={{
+                        width: '60px',
+                        background: theme.card,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '6px',
+                        fontSize: '0.85rem',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        outline: 'none'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: theme.textSec, fontWeight: 700 }}>días</span>
+                  </div>
+                ) : (
+                  <b style={{ fontSize: '1.1rem', fontWeight: 800, color: theme.primary }}>{retencionCampanas} días</b>
+                )}
+              </div>
+            </div>
+
+            {/* RETENCIÓN DE SOPORTE */}
+            <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Retención de Soporte</div>
+                <div style={{ fontSize: '0.75rem', color: theme.textSec, marginTop: '4px', maxWidth: '240px' }}>
+                  Los tickets de soporte cerrados se depurarán de la base de datos tras cumplirse este lapso.
+                </div>
+              </div>
+              <div>
+                {isEditingMaint ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      value={retencionSoporte} 
+                      onChange={(e) => setRetencionSoporte(parseInt(e.target.value) || 0)} 
+                      style={{
+                        width: '60px',
+                        background: theme.card,
+                        color: theme.text,
+                        border: `1px solid ${theme.border}`,
+                        borderRadius: '8px',
+                        padding: '6px',
+                        fontSize: '0.85rem',
+                        textAlign: 'center',
+                        fontWeight: 800,
+                        outline: 'none'
+                      }}
+                    />
+                    <span style={{ fontSize: '0.8rem', color: theme.textSec, fontWeight: 700 }}>días</span>
+                  </div>
+                ) : (
+                  <b style={{ fontSize: '1.1rem', fontWeight: 800, color: theme.primary }}>{retencionSoporte} días</b>
+                )}
+              </div>
             </div>
           </div>
         </div>
