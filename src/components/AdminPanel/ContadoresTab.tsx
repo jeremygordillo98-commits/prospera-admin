@@ -213,8 +213,11 @@ export const ContadoresTab: React.FC<ContadoresTabProps> = ({
                                                             borderBottom: idx === arr.length - 1 ? 'none' : `1px solid ${theme.border}`
                                                         }}>
                                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', gap: 10 }}>
-                                                                 <span style={{ fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                     🏢 {emp.nombre_empresa}
+                                                                 <span style={{ fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                     {emp.id_usuario === acc.id_usuario ? '🏢' : '🤝'} {emp.nombre_empresa}
+                                                                     {emp.id_usuario !== acc.id_usuario && (
+                                                                         <span style={{ fontSize: '0.62rem', color: theme.primary, background: theme.primary + '15', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>Colaborador</span>
+                                                                     )}
                                                                  </span>
                                                                  <span style={{ color: theme.textSec, fontFamily: 'monospace', flexShrink: 0 }}>
                                                                      RUC: {emp.ruc_empresa}
