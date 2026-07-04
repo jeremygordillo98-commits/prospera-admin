@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../../context/ThemeContext';
 import { useData, PreciosConfig } from '../../context/DataContext';
 import { supabase } from '../../services/supabase';
+import { supabaseContable } from '../../services/supabaseContable';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, BarChart, Bar, Cell 
@@ -65,6 +66,51 @@ export default function DashboardView() {
       const { data, error } = await supabase.from('soporte_tickets').select('usuario_id').eq('estado', 'abierto');
       if (error) throw error;
       return new Set(data?.map(t => t.usuario_id)).size;
+    }
+  });
+
+  const { data: systemWidgets } = useQuery({
+    queryKey: ['systemDashboardWidgets'],
+    queryFn: async () => {
+      const todayStr = new Date();
+      todayStr.setHours(0,0,0,0);
+      const todayISO = todayStr.toISOString();
+
+      const { count: usersTodayB2C } = await supabase
+        .from('perfiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('creado_en', todayISO);
+
+      const { count: usersTodayB2B } = await supabaseContable
+        .from('perfiles')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', todayISO);
+
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { count: xmlsThisMonth } = await supabaseContable
+        .from('documentos_sri')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth);
+
+      const { count: campaignsSentThisMonth } = await supabase
+        .from('crm_campanas')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'Enviado')
+        .gte('sent_at', startOfMonth);
+
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count: edgeFunctionErrors24h } = await supabaseContable
+        .from('log_edge_functions')
+        .select('*', { count: 'exact', head: true })
+        .eq('estado', 'ERROR')
+        .gte('ejecutado_al', yesterday);
+
+      return {
+        newUsersToday: (usersTodayB2C || 0) + (usersTodayB2B || 0),
+        xmlsThisMonth: xmlsThisMonth || 0,
+        campaignsSentThisMonth: campaignsSentThisMonth || 0,
+        edgeFunctionErrors24h: edgeFunctionErrors24h || 0
+      };
     }
   });
 
@@ -216,6 +262,64 @@ export default function DashboardView() {
         <div style={kpiStyle('#c084fc')}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#c084fc' }}>Usuarios Ultra</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.ultra}</div></div>
         <div style={kpiStyle('#10b981')}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#10b981' }}>Usuarios Pro</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.pro}</div></div>
         <div style={kpiStyle(theme.danger)}><div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: theme.danger }}>Soporte</div><div className="text-3xl md:text-4xl font-black">{loading ? '...' : stats.usersWithPending}</div></div>
+      </div>
+
+      {/* SECCIÓN DE WIDGETS DEL SISTEMA */}
+      <div style={{ marginBottom: '32px' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: '1.25rem', fontWeight: 900 }}>📊 Métricas de Salud del Ecosistema (B2B & B2C)</h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Card 1: Nuevos Registros */}
+          <div style={kpiStyle(theme.primary)}>
+            <div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: theme.textSec }}>
+              👤 Registros (Hoy)
+            </div>
+            <div className="text-3xl md:text-4xl font-black" style={{ marginTop: '8px' }}>
+              {systemWidgets ? systemWidgets.newUsersToday : '0'}
+            </div>
+            <div className="text-[0.72rem] font-semibold mt-1" style={{ color: theme.textSec }}>
+              App B2C + Pymes B2B
+            </div>
+          </div>
+
+          {/* Card 2: XMLs Contables */}
+          <div style={kpiStyle('#10b981')}>
+            <div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#10b981' }}>
+              📦 XMLs Subidos (Mes)
+            </div>
+            <div className="text-3xl md:text-4xl font-black" style={{ marginTop: '8px' }}>
+              {systemWidgets ? systemWidgets.xmlsThisMonth : '0'}
+            </div>
+            <div className="text-[0.72rem] font-semibold mt-1" style={{ color: theme.textSec }}>
+              En bucket xml-documents
+            </div>
+          </div>
+
+          {/* Card 3: Campañas Enviadas */}
+          <div style={kpiStyle('#8b5cf6')}>
+            <div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: '#8b5cf6' }}>
+              ✉️ Campañas (Mes)
+            </div>
+            <div className="text-3xl md:text-4xl font-black" style={{ marginTop: '8px' }}>
+              {systemWidgets ? systemWidgets.campaignsSentThisMonth : '0'}
+            </div>
+            <div className="text-[0.72rem] font-semibold mt-1" style={{ color: theme.textSec }}>
+              Enviados vía Brevo API
+            </div>
+          </div>
+
+          {/* Card 4: Errores de Edge Functions */}
+          <div style={kpiStyle((systemWidgets?.edgeFunctionErrors24h || 0) > 0 ? theme.danger : '#6b7280')}>
+            <div className="text-[0.75rem] font-extrabold uppercase tracking-wide" style={{ color: (systemWidgets?.edgeFunctionErrors24h || 0) > 0 ? theme.danger : '#6b7280' }}>
+              🚨 Errores Funciones (24h)
+            </div>
+            <div className="text-3xl md:text-4xl font-black" style={{ marginTop: '8px', color: (systemWidgets?.edgeFunctionErrors24h || 0) > 0 ? theme.danger : 'inherit' }}>
+              {systemWidgets ? systemWidgets.edgeFunctionErrors24h : '0'}
+            </div>
+            <div className="text-[0.72rem] font-semibold mt-1" style={{ color: (systemWidgets?.edgeFunctionErrors24h || 0) > 0 ? theme.danger : theme.textSec }}>
+              {(systemWidgets?.edgeFunctionErrors24h || 0) > 0 ? 'Requiere atención' : 'Servidores saludables'}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* SECCIÓN DE VALORIZACIÓN */}

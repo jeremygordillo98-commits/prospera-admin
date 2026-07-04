@@ -7,10 +7,27 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Loader2 } from 'lucide-react';
 
-// --- ÍCONOS SVG ---
+import { UserDetailsSidebar } from './UserDetailsSidebar';
+import { ControlFiltersHeader } from './ControlFiltersHeader';
+
 const IconKey = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg>;
 const IconSettings = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
+
+const formatLastAccess = (dateStr?: string) => {
+  if (!dateStr) return 'Nunca';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString('es-EC', { 
+      day: '2-digit', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return '---';
+  }
+};
 
 export default function ControlView() {
   const { theme, isDark } = useTheme();
@@ -34,7 +51,7 @@ export default function ControlView() {
     queryFn: async () => {
       const { data, error } = await supabase.from('perfiles').select('*').order('creado_en', { ascending: false });
       if (error) throw error;
-      return data || [];
+      return (data || []).filter(u => u.rol !== 'admin');
     }
   });
 
@@ -96,7 +113,6 @@ export default function ControlView() {
   });
 
   const exportToExcel = () => {
-    // Preparar datos con encabezados claros
     const data = filteredUsers.map(u => ({
       "Nombre Completo": u.nombre_completo || '---',
       "Correo Electrónico": u.email,
@@ -110,7 +126,6 @@ export default function ControlView() {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     
-    // Auto-ajustar ancho de columnas (opcional pero profesional)
     const wscols = [
       {wch: 30}, // Nombre
       {wch: 35}, // Email
@@ -132,7 +147,6 @@ export default function ControlView() {
     logoImg.src = '/admin-logo.png';
 
     const renderReport = () => {
-        // Encabezado
         doc.addImage(logoImg, 'PNG', 14, 10, 40, 15);
         
         doc.setFontSize(22);
@@ -146,7 +160,6 @@ export default function ControlView() {
         doc.text(`Fecha: ${new Date().toLocaleString()}`, 14, 53);
         doc.text(`Total usuarios filtrados: ${filteredUsers.length}`, 14, 58);
 
-        // Línea decorativa
         doc.setDrawColor(59, 130, 246);
         doc.setLineWidth(1.5);
         doc.line(14, 65, 196, 65);
@@ -181,7 +194,6 @@ export default function ControlView() {
           },
           margin: { top: 75 },
           didDrawPage: (data) => {
-              // Footer
               const str = "Página " + doc.getNumberOfPages();
               doc.setFontSize(9);
               doc.setTextColor(150);
@@ -194,7 +206,7 @@ export default function ControlView() {
     };
 
     logoImg.onload = renderReport;
-    logoImg.onerror = renderReport; // Fallback si no carga la imagen
+    logoImg.onerror = renderReport;
   };
 
   const glassStyle = { 
@@ -225,46 +237,22 @@ export default function ControlView() {
 
   return (
     <div style={{ animation: 'fadeIn 0.5s ease' }}>
-        {/* TITULAR Y ACCIONES */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexDirection: isMobile ? 'column' : 'row', gap: 20 }}>
-            <div>
-                <h2 style={{ margin: 0, fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, letterSpacing: '-1px' }}>Gestión de Usuarios</h2>
-                <div style={{ color: theme.textSec, fontSize: '0.9rem', marginTop: 4, fontWeight: 600 }}>{filteredUsers.length} cuentas registradas en el sistema</div>
-            </div>
-            <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={exportToPDF} style={{ background: theme.card, color: theme.text, border: `1px solid ${theme.border}`, padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', transition: 'all 0.2s' }} className="hover-scale">🖨️ Imprimir</button>
-                <button onClick={exportToExcel} style={{ background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', padding: '12px 24px', borderRadius: 14, cursor: 'pointer', fontWeight: 800, fontSize: '0.9rem', boxShadow: `0 8px 24px ${theme.primary}40`, transition: 'all 0.2s' }} className="hover-scale">📥 Descargar Excel</button>
-            </div>
-        </div>
-
-        {/* FILTROS INTELIGENTES */}
-        <div style={glassStyle}>
-            <div onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
-                    Filtros de Auditoría
-                </h3>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>▼</div>
-            </div>
-            
-            {showFilters && (
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginTop: 24, paddingTop: 24, borderTop: `1px solid ${theme.border}` }}>
-                    <div>
-                        <label style={{display: 'block', fontSize: '0.75rem', color: theme.textSec, marginBottom: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px'}}>Identificador / Email</label>
-                        <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Ej. Alex Rivera" style={inputStyle} />
-                    </div>
-                    <div>
-                        <label style={{display: 'block', fontSize: '0.75rem', color: theme.textSec, marginBottom: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px'}}>Estado del Plan</label>
-                        <select value={planFilter} onChange={e => setPlanFilter(e.target.value)} style={inputStyle}>
-                            <option value="todos">Todos los niveles</option>
-                            <option value="básico">Básico (Free)</option>
-                            <option value="pro">Pro (Standard)</option>
-                            <option value="ultra">Ultra (Tier 1)</option>
-                        </select>
-                    </div>
-                </div>
-            )}
-        </div>
+        <ControlFiltersHeader
+            filteredUsersLength={filteredUsers.length}
+            exportToPDF={exportToPDF}
+            exportToExcel={exportToExcel}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            planFilter={planFilter}
+            setPlanFilter={setPlanFilter}
+            isMobile={isMobile}
+            isDark={isDark}
+            theme={theme}
+            glassStyle={glassStyle}
+            inputStyle={inputStyle}
+        />
 
         {/* CONTENEDOR DE USUARIOS */}
         {isMobile ? (
@@ -327,6 +315,7 @@ export default function ControlView() {
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales / Contacto</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Nivel Actual</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Billing ($)</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Último Acceso</th>
                             <th style={{ padding: '20px 24px', textAlign: 'right', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Acceso</th>
                         </tr>
                     </thead>
@@ -383,6 +372,9 @@ export default function ControlView() {
                                             />
                                         </div>
                                     </td>
+                                    <td style={{ padding: '20px 24px', fontWeight: 700, fontSize: '0.85rem', color: theme.textSec }}>
+                                        {formatLastAccess(user.ultimo_acceso)}
+                                    </td>
                                     <td style={{ padding: '20px 24px', textAlign: 'right' }}>
                                         <div style={{display: 'flex', gap: 10, justifyContent: 'flex-end'}}>
                                             <button onClick={() => handleResetPassword(user.email)} style={{ background: 'transparent', border: `1px solid ${theme.danger}40`, color: theme.danger, width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-scale" title="Resetear Clave">
@@ -405,54 +397,14 @@ export default function ControlView() {
         )}
 
         {/* MODAL DE PERMISOS PREMIUM */}
-        {selectedUser && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: isMobile ? 'flex-end' : 'center', zIndex: 10000, backdropFilter: 'blur(8px)', padding: isMobile ? 0 : 20 }} onClick={() => setSelectedUser(null)}>
-                <div 
-                  style={{ 
-                    background: theme.card, 
-                    padding: isMobile ? '30px 20px 40px' : '40px', 
-                    borderRadius: isMobile ? '32px 32px 0 0' : '32px', 
-                    width: '100%', 
-                    maxWidth: '480px', 
-                    border: `1px solid ${theme.border}`, 
-                    maxHeight: '90vh', 
-                    overflowY: 'auto', 
-                    boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
-                    animation: isMobile ? 'slideUp 0.4s ease' : 'scaleIn 0.3s ease'
-                  }} 
-                  onClick={e => e.stopPropagation()}
-                >
-                    <div style={{textAlign: 'center', marginBottom: 32}}>
-                        <div style={{ width: 64, height: 64, borderRadius: '20px', background: 'linear-gradient(135deg, #3b82f6, #10b981)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.8rem', fontWeight: 950 }}>{selectedUser.nombre_completo?.[0] || 'U'}</div>
-                        <h3 style={{ margin: '0 0 4px 0', color: theme.text, fontSize: '1.5rem', fontWeight: 900, letterSpacing: '-0.5px' }}>{selectedUser.nombre_completo || 'Usuario'}</h3>
-                        <div style={{ fontSize: '0.9rem', color: theme.textSec, fontWeight: 500 }}>{selectedUser.email}</div>
-                    </div>
-                    
-                    <PermissionGroup title="🛡️ Nivel Básico" color="#3b82f6">
-                      <SwitchRow label="Presupuestos" desc="Gestión de límites mensuales" checked={selectedUser.permiso_presupuestos} onChange={() => togglePermission(selectedUser.id, 'permiso_presupuestos', selectedUser.permiso_presupuestos)} theme={theme} />
-                      <SwitchRow label="Recordatorios" desc="Alarmas y facturas" checked={selectedUser.permiso_recordatorios} onChange={() => togglePermission(selectedUser.id, 'permiso_recordatorios', selectedUser.permiso_recordatorios)} theme={theme} />
-                    </PermissionGroup>
-                    
-                    <PermissionGroup title="💎 Nivel PRO" color="#10b981">
-                      <SwitchRow label="Subcategorías" desc="Jerarquía avanzada" checked={selectedUser.permiso_subcategorias} onChange={() => togglePermission(selectedUser.id, 'permiso_subcategorias', selectedUser.permiso_subcategorias)} theme={theme} />
-                      <SwitchRow label="Conciliación" desc="Auditoría bancaria" checked={selectedUser.permiso_conciliacion} onChange={() => togglePermission(selectedUser.id, 'permiso_conciliacion', selectedUser.permiso_conciliacion)} theme={theme} />
-                      <SwitchRow label="Reporte Estado" desc="Estado de Cuenta / Exportación" checked={selectedUser.permiso_reporte_estado} onChange={() => togglePermission(selectedUser.id, 'permiso_reporte_estado', selectedUser.permiso_reporte_estado)} theme={theme} />
-                      <SwitchRow label="Reporte Patrimonio" desc="Valor neto total" checked={selectedUser.permiso_reporte_patrimonio} onChange={() => togglePermission(selectedUser.id, 'permiso_reporte_patrimonio', selectedUser.permiso_reporte_patrimonio)} theme={theme} />
-                      <SwitchRow label="Reporte Flujo" desc="Sankey Diagrams" checked={selectedUser.permiso_reporte_flujo} onChange={() => togglePermission(selectedUser.id, 'permiso_reporte_flujo', selectedUser.permiso_reporte_flujo)} theme={theme} />
-                    </PermissionGroup>
-                    
-                    <PermissionGroup title="🚀 Nivel ULTRA" color="#a855f7">
-                      <SwitchRow label="Prospera CFO (IA)" desc="Asesor GPT-4o" checked={selectedUser.permiso_chat} onChange={() => togglePermission(selectedUser.id, 'permiso_chat', selectedUser.permiso_chat)} theme={theme} />
-                      <SwitchRow label="Magic Input" desc="Voz y texto natural" checked={selectedUser.permiso_magic} onChange={() => togglePermission(selectedUser.id, 'permiso_magic', selectedUser.permiso_magic)} theme={theme} />
-                      <SwitchRow label="Predicciones" desc="Smart Insights" checked={selectedUser.permiso_insights} onChange={() => togglePermission(selectedUser.id, 'permiso_insights', selectedUser.permiso_insights)} theme={theme} />
-                      <SwitchRow label="Reporte Comparativo" desc="Benchmarking" checked={selectedUser.permiso_reporte_comparativo} onChange={() => togglePermission(selectedUser.id, 'permiso_reporte_comparativo', selectedUser.permiso_reporte_comparativo)} theme={theme} />
-                      <SwitchRow label="Mapa de Calor" desc="Densidad de gastos" checked={selectedUser.permiso_reporte_calor} onChange={() => togglePermission(selectedUser.id, 'permiso_reporte_calor', selectedUser.permiso_reporte_calor)} theme={theme} />
-                    </PermissionGroup>
-                    
-                    <button onClick={() => setSelectedUser(null)} style={{ width: '100%', padding: '18px', marginTop: '32px', background: theme.primary, color: isDark ? '#000' : '#fff', border: 'none', borderRadius: '18px', fontWeight: 900, cursor: 'pointer', transition: 'all 0.3s', boxShadow: `0 10px 30px ${theme.primary}40` }} className="hover-scale">Confirmar Configuración</button>
-                </div>
-            </div>
-        )}
+        <UserDetailsSidebar
+            selectedUser={selectedUser}
+            setSelectedUser={setSelectedUser}
+            togglePermission={togglePermission}
+            isMobile={isMobile}
+            isDark={isDark}
+            theme={theme}
+        />
 
         {/* MODAL DE IMPERSONACIÓN PREMIUM */}
         {impersonateModal && impersonateModal.isOpen && (
@@ -657,35 +609,3 @@ export default function ControlView() {
     </div>
   );
 }
-
-const PermissionGroup = ({ title, color, children }: any) => (
-  <div style={{ marginBottom: 24 }}>
-    <h4 style={{ color, fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: 12, letterSpacing: '1.2px', fontWeight: 900 }}>{title}</h4>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{children}</div>
-  </div>
-);
-
-const SwitchRow = ({ label, desc, checked, onChange, theme }: any) => (
-    <div onClick={onChange} style={{ 
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-      padding: '14px 18px', background: theme.bg, borderRadius: '18px', 
-      border: `1px solid ${checked ? theme.primary + '40' : theme.border}`,
-      transition: 'all 0.2s', cursor: 'pointer'
-    }}>
-        <div style={{ flex: 1, paddingRight: 10 }}>
-            <div style={{ fontSize: '1rem', color: theme.text, fontWeight: 800, letterSpacing: '-0.3px' }}>{label}</div>
-            <div style={{ fontSize: '0.75rem', color: theme.textSec, fontWeight: 500 }}>{desc}</div>
-        </div>
-        <div style={{ 
-          width: '50px', height: '28px', background: checked ? theme.primary : theme.textSec + '40', 
-          borderRadius: '50px', position: 'relative', transition: '0.4s', flexShrink: 0 
-        }}>
-            <div style={{ 
-              width: '22px', height: '22px', background: 'white', 
-              borderRadius: '50%', position: 'absolute', top: '3px', 
-              left: checked ? '25px' : '3px', transition: '0.4s cubic-bezier(0.18, 0.89, 0.35, 1.15)', 
-              boxShadow: '0 4px 8px rgba(0,0,0,0.15)' 
-            }} />
-        </div>
-    </div>
-);
