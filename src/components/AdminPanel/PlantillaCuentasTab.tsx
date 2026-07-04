@@ -11,10 +11,9 @@ export default function PlantillaCuentasTab() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    codigo_cuenta: '',
-    nombre: '',
+    codigo: '',
+    cuenta: '',
     tipo: 'Activo',
-    acepta_movimientos: true
   });
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -23,9 +22,9 @@ export default function PlantillaCuentasTab() {
     queryKey: ['plantillaCuentas'],
     queryFn: async () => {
       const { data, error } = await supabaseContable
-        .from('plantilla_plan_cuentas')
+        .from('plan_maestro')
         .select('*')
-        .order('codigo_cuenta', { ascending: true });
+        .order('codigo', { ascending: true });
       if (error) throw error;
       return data || [];
     }
@@ -36,25 +35,24 @@ export default function PlantillaCuentasTab() {
     mutationFn: async () => {
       setErrorMsg('');
       const payload = {
-        codigo_cuenta: formData.codigo_cuenta.trim(),
-        nombre: formData.nombre.trim(),
+        codigo: formData.codigo.trim(),
+        cuenta: formData.cuenta.trim(),
         tipo: formData.tipo,
-        acepta_movimientos: formData.acepta_movimientos
       };
 
-      if (!payload.codigo_cuenta || !payload.nombre) {
+      if (!payload.codigo || !payload.cuenta) {
         throw new Error('Todos los campos son obligatorios.');
       }
 
       if (editingId) {
         const { error } = await supabaseContable
-          .from('plantilla_plan_cuentas')
+          .from('plan_maestro')
           .update(payload)
           .eq('id', editingId);
         if (error) throw error;
       } else {
         const { error } = await supabaseContable
-          .from('plantilla_plan_cuentas')
+          .from('plan_maestro')
           .insert([payload]);
         if (error) {
           if (error.code === '23505') throw new Error('Ya existe una cuenta con este código.');
@@ -75,7 +73,7 @@ export default function PlantillaCuentasTab() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabaseContable
-        .from('plantilla_plan_cuentas')
+        .from('plan_maestro')
         .delete()
         .eq('id', id);
       if (error) throw error;
@@ -90,10 +88,9 @@ export default function PlantillaCuentasTab() {
 
   const resetForm = () => {
     setFormData({
-      codigo_cuenta: '',
-      nombre: '',
+      codigo: '',
+      cuenta: '',
       tipo: 'Activo',
-      acepta_movimientos: true
     });
     setEditingId(null);
     setErrorMsg('');
@@ -102,16 +99,15 @@ export default function PlantillaCuentasTab() {
   const handleEdit = (acc: any) => {
     setEditingId(acc.id);
     setFormData({
-      codigo_cuenta: acc.codigo_cuenta,
-      nombre: acc.nombre,
+      codigo: acc.codigo,
+      cuenta: acc.cuenta,
       tipo: acc.tipo,
-      acepta_movimientos: acc.acepta_movimientos
     });
     setIsModalOpen(true);
   };
 
   const handleDelete = (acc: any) => {
-    if (window.confirm(`⚠️ ¿Estás seguro de eliminar "${acc.codigo_cuenta} - ${acc.nombre}" de la plantilla? Las nuevas empresas ya no recibirán esta cuenta por defecto.`)) {
+    if (window.confirm(`⚠️ ¿Estás seguro de eliminar "${acc.codigo} - ${acc.cuenta}" de la plantilla? Las nuevas empresas ya no recibirán esta cuenta por defecto.`)) {
       deleteMutation.mutate(acc.id);
     }
   };
@@ -179,45 +175,43 @@ export default function PlantillaCuentasTab() {
             <thead>
               <tr style={{ borderBottom: `1px solid ${theme.border}`, color: theme.textSec }}>
                 <th style={{ padding: '12px 16px', fontWeight: 800 }}>Código</th>
-                <th style={{ padding: '12px 16px', fontWeight: 800 }}>Nombre</th>
+                <th style={{ padding: '12px 16px', fontWeight: 800 }}>Cuenta</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800 }}>Tipo</th>
-                <th style={{ padding: '12px 16px', fontWeight: 800 }}>Movimientos</th>
                 <th style={{ padding: '12px 16px', fontWeight: 800, textAlign: 'right' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {accounts.map((acc: any) => {
-                const isHeader = !acc.acepta_movimientos;
+                const isAgrupador = acc.tipo === 'Agrupador';
+                const depth = acc.codigo ? acc.codigo.split('.').length - 1 : 0;
+                const tipoColors: Record<string, { bg: string; color: string }> = {
+                  'Agrupador':              { bg: 'rgba(100,116,139,0.12)', color: '#94a3b8' },
+                  'Activos':                { bg: 'rgba(59,130,246,0.10)',  color: '#3b82f6' },
+                  'Pasivos':                { bg: 'rgba(239,68,68,0.10)',   color: '#ef4444' },
+                  'Patrimonio':             { bg: 'rgba(168,85,247,0.10)',  color: '#a855f7' },
+                  'Ingresos':               { bg: 'rgba(16,185,129,0.10)',  color: '#10b981' },
+                  'Gastos':                 { bg: 'rgba(245,158,11,0.10)',  color: '#f59e0b' },
+                };
+                const tipoStyle = tipoColors[acc.tipo] || { bg: 'rgba(100,116,139,0.10)', color: '#94a3b8' };
                 return (
                   <tr key={acc.id} style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}>
-                    <td style={{ padding: '12px 16px', fontWeight: isHeader ? 800 : 500, color: isHeader ? theme.primary : theme.text }}>
-                      {acc.codigo_cuenta}
+                    <td style={{ padding: '12px 16px', fontWeight: isAgrupador ? 900 : 500, color: isAgrupador ? theme.primary : theme.text, fontFamily: 'monospace', fontSize: '0.82rem' }}>
+                      {acc.codigo}
                     </td>
-                    <td style={{ padding: '12px 16px', fontWeight: isHeader ? 800 : 500, paddingLeft: `${(acc.codigo_cuenta.split('.').length - 1) * 16 + 16}px` }}>
-                      {acc.nombre}
+                    <td style={{ padding: '12px 16px', fontWeight: isAgrupador ? 800 : 500, paddingLeft: `${depth * 14 + 16}px` }}>
+                      {acc.cuenta}
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{
-                        background: acc.tipo === 'Activo' ? 'rgba(59, 130, 246, 0.1)' : acc.tipo === 'Pasivo' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                        color: acc.tipo === 'Activo' ? '#3b82f6' : acc.tipo === 'Pasivo' ? '#ef4444' : '#10b981',
-                        padding: '2px 8px',
+                        background: tipoStyle.bg,
+                        color: tipoStyle.color,
+                        padding: '2px 10px',
                         borderRadius: 6,
-                        fontSize: '0.75rem',
+                        fontSize: '0.72rem',
                         fontWeight: 700
                       }}>
                         {acc.tipo}
                       </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      {acc.acepta_movimientos ? (
-                        <span style={{ color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Check size={14} /> Permite
-                        </span>
-                      ) : (
-                        <span style={{ color: theme.textSec, fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <X size={14} /> Solo Grupo
-                        </span>
-                      )}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -263,9 +257,9 @@ export default function PlantillaCuentasTab() {
                 <label style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.textSec, marginBottom: 6, display: 'block' }}>Código de Cuenta</label>
                 <input
                   type="text"
-                  placeholder="ej. 1.1.1.01"
-                  value={formData.codigo_cuenta}
-                  onChange={e => setFormData({ ...formData, codigo_cuenta: e.target.value })}
+                  placeholder="ej. 1.1.1"
+                  value={formData.codigo}
+                  onChange={e => setFormData({ ...formData, codigo: e.target.value })}
                   style={inputStyle}
                 />
               </div>
@@ -275,8 +269,8 @@ export default function PlantillaCuentasTab() {
                 <input
                   type="text"
                   placeholder="ej. Caja General"
-                  value={formData.nombre}
-                  onChange={e => setFormData({ ...formData, nombre: e.target.value })}
+                  value={formData.cuenta}
+                  onChange={e => setFormData({ ...formData, cuenta: e.target.value })}
                   style={inputStyle}
                 />
               </div>
@@ -288,23 +282,10 @@ export default function PlantillaCuentasTab() {
                   onChange={e => setFormData({ ...formData, tipo: e.target.value })}
                   style={inputStyle}
                 >
-                  {['Activo', 'Pasivo', 'Patrimonio', 'Ingreso', 'Egreso'].map(t => (
+                  {['Agrupador', 'Activos', 'Pasivos', 'Patrimonio', 'Ingresos', 'Gastos', 'Banco', 'Obligaciones Tributarias', 'Intereses Financieros', 'Gastos No Deducibles', 'Otros'].map(t => (
                     <option key={t} value={t}>{t}</option>
                   ))}
                 </select>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: theme.inputBg, borderRadius: '12px', border: `1px solid ${theme.border}` }}>
-                <input
-                  type="checkbox"
-                  id="acepta_mov"
-                  checked={formData.acepta_movimientos}
-                  onChange={e => setFormData({ ...formData, acepta_movimientos: e.target.checked })}
-                  style={{ width: 16, height: 16, cursor: 'pointer' }}
-                />
-                <label htmlFor="acepta_mov" style={{ fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                  Acepta movimientos (para asientos contables)
-                </label>
               </div>
 
               {errorMsg && (
