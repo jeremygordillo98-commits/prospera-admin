@@ -2,16 +2,39 @@ import React, { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabaseContable } from '../../services/supabaseContable';
 import { useTheme } from '../../context/ThemeContext';
-import { Lock, Mail, Loader2, LogOut, ChevronRight, Eye } from 'lucide-react';
+import { Lock, Mail, Loader2, LogOut, ChevronRight } from 'lucide-react';
+import { EliminacionesTab } from './EliminacionesTab';
+import { StorageMonitorTab } from './StorageMonitorTab';
+import { SriCalendarioTab } from './SriCalendarioTab';
+import PlantillaCuentasTab from './PlantillaCuentasTab';
+import EdgeFunctionLogsTab from './EdgeFunctionLogsTab';
+import RoiCalculatorTab from './RoiCalculatorTab';
 
-const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
+import { ContadoresTab } from './ContadoresTab';
+import { EmpresasTab } from './EmpresasTab';
+import { ImpersonateModal } from './ImpersonateModal';
+
+const formatLastAccess = (dateStr?: string) => {
+  if (!dateStr) return 'Nunca';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString('es-EC', { 
+      day: '2-digit', 
+      month: 'short', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  } catch (e) {
+    return '---';
+  }
+};
 
 export const ContableManager = () => {
     const { theme, isDark } = useTheme();
     const [accountants, setAccountants] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas'>('contadores');
+    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas' | 'eliminaciones' | 'storage' | 'calendario' | 'plantilla-cuentas' | 'logs-functions' | 'calculadora-roi'>('contadores');
     const [companySearchTerm, setCompanySearchTerm] = useState('');
     
     // Auth Pymes
@@ -24,6 +47,7 @@ export const ContableManager = () => {
     const [counts, setCounts] = useState<any>({});
     const [empresas, setEmpresas] = useState<Record<string, any[]>>({});
     const [allCompanies, setAllCompanies] = useState<any[]>([]);
+    const [colaboradoresGlobal, setColaboradoresGlobal] = useState<any[]>([]);
     const [impersonateModal, setImpersonateModal] = useState<{
         isOpen: boolean;
         email: string;
@@ -31,6 +55,8 @@ export const ContableManager = () => {
         loading: boolean;
         error?: string;
     } | null>(null);
+    const [deleteAccountantModal, setDeleteAccountantModal] = useState<any | null>(null);
+    const [deleteSuccessModal, setDeleteSuccessModal] = useState<string | null>(null);
 
     useEffect(() => {
         checkSession();
@@ -71,7 +97,7 @@ export const ContableManager = () => {
                 .order('nombre_completo');
             if (fetchError) throw fetchError;
 
-            const profiles = data || [];
+            const profiles = (data || []).filter(p => p.rol !== 'admin');
             const newCounts: any = {};
             const newEmpresas: any = {};
             for (const acc of profiles) {
@@ -88,7 +114,11 @@ export const ContableManager = () => {
                 .select('*')
                 .order('nombre_empresa');
 
-            return { profiles, counts: newCounts, empresas: newEmpresas, allCompanies: allCompanies || [] };
+            const { data: colabData } = await supabaseContable
+                .from('colaboradores_empresa')
+                .select('*');
+
+            return { profiles, counts: newCounts, empresas: newEmpresas, allCompanies: allCompanies || [], colaboradores: colabData || [] };
         }
     });
 
@@ -98,8 +128,50 @@ export const ContableManager = () => {
             setCounts(queryData.counts);
             setEmpresas(queryData.empresas || {});
             setAllCompanies(queryData.allCompanies || []);
+            setColaboradoresGlobal(queryData.colaboradores || []);
         }
     }, [queryData]);
+
+    const handleAddColaborador = async (companyId: string, userId: string) => {
+        if (!userId) return;
+        const user = accountants.find(a => a.id_usuario === userId);
+        if (!user) return;
+        
+        setLoading(true);
+        try {
+            const { error } = await supabaseContable.from('colaboradores_empresa').insert({
+                id_empresa: companyId,
+                id_usuario: userId,
+                email_invitado: user.email,
+                rol: 'colaborador'
+            });
+            if (error) {
+                if (error.code === '23505' || error.message.includes('unique')) alert('Este usuario ya es colaborador.');
+                else throw error;
+            } else {
+                alert('Colaborador asignado correctamente.');
+                await refetch();
+            }
+        } catch (err: any) {
+            alert('Error al asignar colaborador: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleRemoveColaborador = async (colabId: string) => {
+        if (!window.confirm("¿Seguro de remover este colaborador?")) return;
+        setLoading(true);
+        try {
+            const { error } = await supabaseContable.from('colaboradores_empresa').delete().eq('id', colabId);
+            if (error) throw error;
+            await refetch();
+        } catch (err: any) {
+            alert('Error al remover colaborador: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         setLoading(isFetchingAcc);
@@ -128,6 +200,44 @@ export const ContableManager = () => {
 
     const handleImpersonate = (email: string) => {
         setImpersonateModal({ isOpen: true, email, loading: false });
+    };
+
+    const handleDeleteAccountantClick = (acc: any) => {
+        const usage = counts[acc.id_usuario] || 0;
+        if (usage > 0) {
+            alert(`⚠️ No se puede eliminar a este contador porque todavía tiene ${usage} empresa(s) asignada(s). Primero debes eliminar o reasignar sus empresas.`);
+            return;
+        }
+        setDeleteAccountantModal(acc);
+    };
+
+    const confirmDeleteAccountant = async () => {
+        if (!deleteAccountantModal) return;
+        const acc = deleteAccountantModal;
+        setDeleteAccountantModal(null);
+        setLoading(true);
+        try {
+            // 1. Eliminar colaboraciones asociadas
+            const { error: colabErr } = await supabaseContable
+                .from('colaboradores_empresa')
+                .delete()
+                .eq('id_usuario', acc.id_usuario);
+            if (colabErr) throw colabErr;
+
+            // 2. Eliminar perfil de la tabla 'perfiles'
+            const { error: profileErr } = await supabaseContable
+                .from('perfiles')
+                .delete()
+                .eq('id_usuario', acc.id_usuario);
+            if (profileErr) throw profileErr;
+
+            setDeleteSuccessModal(`El perfil de "${acc.nombre_completo || acc.email}" ha sido eliminado exitosamente.`);
+            await refetch();
+        } catch (err: any) {
+            alert(`❌ Error al eliminar contador: ${err.message || err}`);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const updateLimit = async (userId: string, newLimit: number) => {
@@ -310,10 +420,23 @@ export const ContableManager = () => {
             </div>
 
             {/* Selector de sub-pestañas */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1px solid ${theme.border}`, paddingBottom: 16 }}>
-                <button
-                    onClick={() => setActiveSubTab('contadores')}
-                    style={{
+            <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1px solid ${theme.border}`, paddingBottom: 16, flexWrap: 'wrap' }}>
+                {[
+                  { id: 'contadores', label: 'Gestión de Contadores', emoji: '💼' },
+                  { id: 'empresas', label: 'Clientes (Empresas)', emoji: '🏢' },
+                  { id: 'eliminaciones', label: 'Eliminaciones', emoji: '🗑️' },
+                  { id: 'storage', label: 'Storage', emoji: '📦' },
+                  { id: 'calendario', label: 'Calendario SRI', emoji: '📅' },
+                  { id: 'plantilla-cuentas', label: 'Plantilla Cuentas', emoji: '📋' },
+                  { id: 'logs-functions', label: 'Logs Funciones', emoji: '⚙️' },
+                  { id: 'calculadora-roi', label: 'Calculadora ROI', emoji: '🧮' },
+                ].map(tab => {
+                  const active = activeSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveSubTab(tab.id as any)}
+                      style={{
                         padding: '10px 20px',
                         borderRadius: 12,
                         border: 'none',
@@ -321,385 +444,107 @@ export const ContableManager = () => {
                         fontSize: '0.85rem',
                         fontWeight: 800,
                         transition: 'all 0.2s',
-                        background: activeSubTab === 'contadores' ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                        color: activeSubTab === 'contadores' ? '#fff' : theme.textSec,
-                        boxShadow: activeSubTab === 'contadores' ? `0 4px 15px ${theme.primary}30` : 'none'
-                    }}
-                >
-                    💼 Gestión de Contadores
-                </button>
-                <button
-                    onClick={() => setActiveSubTab('empresas')}
-                    style={{
-                        padding: '10px 20px',
-                        borderRadius: 12,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: 800,
-                        transition: 'all 0.2s',
-                        background: activeSubTab === 'empresas' ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                        color: activeSubTab === 'empresas' ? '#fff' : theme.textSec,
-                        boxShadow: activeSubTab === 'empresas' ? `0 4px 15px ${theme.primary}30` : 'none'
-                    }}
-                >
-                    🏢 Clientes (Empresas)
-                </button>
+                        background: active ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
+                        color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
+                        boxShadow: active ? `0 4px 15px ${theme.primary}30` : 'none'
+                      }}
+                    >
+                      {tab.emoji} {tab.label}
+                    </button>
+                  );
+                })}
             </div>
 
             {activeSubTab === 'contadores' ? (
-                <>
-                    <div style={{ ...cardStyle, display: 'flex', gap: 12, marginBottom: 24 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
-                        <input 
-                            type="text" 
-                            placeholder="Filtrar por nombre, Razón Social, email o RUC..." 
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            style={{ ...inputStyle, flex: 1, border: 'none' }}
-                        />
-                    </div>
+                <ContadoresTab
+                    loading={loading}
+                    accountants={accountants}
+                    filtered={filtered}
+                    counts={counts}
+                    empresas={empresas}
+                    updateField={updateField}
+                    handleResetPassword={handleResetPassword}
+                    handleImpersonate={handleImpersonate}
+                    handleDeleteAccountantClick={handleDeleteAccountantClick}
+                    updateLimit={updateLimit}
+                    updateCompanyPermission={updateCompanyPermission}
+                    reassignCompany={reassignCompany}
+                    theme={theme}
+                    isDark={isDark}
+                    cardStyle={cardStyle}
+                    inputStyle={inputStyle}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                />
+            ) : activeSubTab === 'empresas' ? (
+                <EmpresasTab
+                    allCompanies={allCompanies}
+                    accountants={accountants}
+                    colaboradoresGlobal={colaboradoresGlobal}
+                    companySearchTerm={companySearchTerm}
+                    setCompanySearchTerm={setCompanySearchTerm}
+                    handleAddColaborador={handleAddColaborador}
+                    handleRemoveColaborador={handleRemoveColaborador}
+                    updateCompanyPermission={updateCompanyPermission}
+                    reassignCompany={reassignCompany}
+                    theme={theme}
+                    isDark={isDark}
+                    cardStyle={cardStyle}
+                    inputStyle={inputStyle}
+                />
+            ) : null}
 
-                    {loading && accountants.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: 40, color: theme.textSec, fontWeight: 700 }}>SINCRONIZANDO CON SUPABASE PYMES...</div>
-                    ) : accountants.length === 0 ? (
-                        <div style={{ ...cardStyle, textAlign: 'center', padding: 40, border: `2px dashed ${theme.border}` }}>
-                            <p style={{ color: theme.textSec, fontWeight: 800 }}>No se encontraron perfiles contables registrados.</p>
-                        </div>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: 20 }}>
-                            {filtered.map(acc => {
-                                const usage = counts[acc.id_usuario] || 0;
-                                const limit = acc.limite_empresas || 1;
-                                const price = acc.precio_por_cliente || 0;
-                                const totalActual = usage * price;
-                                const totalProyectado = limit * price;
-
-                                return (
-                                    <div key={acc.id_usuario} style={cardStyle}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                                            <div style={{ width: 48, height: 48, borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #3b82f6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem' }}>
-                                                {acc.email?.charAt(0).toUpperCase() || '?'}
-                                            </div>
-                                            <div style={{ flex: 1, overflow: 'hidden' }}>
-                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>NOMBRE COMPLETO</label>
-                                                <input 
-                                                    defaultValue={acc.nombre_completo || 'Sin Nombre'}
-                                                    onBlur={e => { if(e.target.value !== acc.nombre_completo) updateField(acc.id_usuario, 'nombre_completo', e.target.value) }}
-                                                    style={{ ...inputStyle, width: '100%', fontWeight: 900, fontSize: '1.05rem' }}
-                                                />
-                                                <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
-                                            </div>
-                                            <div style={{ display: 'flex', gap: 6 }}>
-                                                <button 
-                                                    onClick={() => handleResetPassword(acc.email)}
-                                                    title="Restablecer Contraseña"
-                                                    style={{ background: theme.primary + '15', color: theme.primary, border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
-                                                >
-                                                    <Lock size={16} />
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleImpersonate(acc.email)}
-                                                    title="Ver como Usuario"
-                                                    style={{ background: '#8b5cf615', color: '#8b5cf6', border: 'none', borderRadius: 10, padding: 8, cursor: 'pointer', transition: 'all 0.2s' }}
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                                            <div>
-                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RAZÓN SOCIAL</label>
-                                                <input 
-                                                    defaultValue={acc.razon_social || ''}
-                                                    placeholder="Nombre comercial..."
-                                                    onBlur={e => { if(e.target.value !== acc.razon_social) updateField(acc.id_usuario, 'razon_social', e.target.value) }}
-                                                    style={{ ...inputStyle, width: '100%' }}
-                                                />
-                                            </div>
-                                            <div>
-                                                <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>RUC</label>
-                                                <input 
-                                                    defaultValue={acc.ruc_profesional || ''}
-                                                    onBlur={e => { if(e.target.value !== acc.ruc_profesional) updateField(acc.id_usuario, 'ruc_profesional', e.target.value) }}
-                                                    style={{ ...inputStyle, width: '100%' }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div style={{ background: theme.bg, padding: 16, borderRadius: 16, border: `1px solid ${theme.border}` }}>
-                                            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>REGLA DE COBRO ($)</label>
-                                                    <input 
-                                                        type="number"
-                                                        defaultValue={acc.precio_por_cliente || 0}
-                                                        onBlur={e => {
-                                                            const val = parseFloat(e.target.value);
-                                                            if (val !== acc.precio_por_cliente) updateField(acc.id_usuario, 'precio_por_cliente', val);
-                                                        }}
-                                                        style={{ ...inputStyle, width: '100%', fontWeight: 800, color: theme.primary }}
-                                                    />
-                                                </div>
-                                                <div style={{ flex: 1 }}>
-                                                    <label style={{ fontSize: '0.65rem', color: theme.textSec, fontWeight: 900, marginBottom: 4, display: 'block' }}>CUPO MÁXIMO</label>
-                                                    <input 
-                                                        type="number"
-                                                        defaultValue={limit}
-                                                        min={usage}
-                                                        onBlur={e => {
-                                                            const val = parseInt(e.target.value);
-                                                            const usage = counts[acc.id_usuario] || 0;
-                                                            if (val < usage) {
-                                                                alert(`⚠️ El cupo mínimo permitido es ${usage} (clientes en uso).`);
-                                                                e.target.value = limit.toString(); // Revertir visualmente
-                                                                return;
-                                                            }
-                                                            if (val !== limit) updateLimit(acc.id_usuario, val);
-                                                        }}
-                                                        style={{ ...inputStyle, width: '100%', fontWeight: 800 }}
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: `1px solid ${theme.border}`, fontSize: '0.85rem' }}>
-                                                <span style={{ color: theme.textSec }}>Clientes en uso:</span>
-                                                <span style={{ fontWeight: 800, color: usage > limit ? theme.danger : theme.text }}>{usage} / {limit}</span>
-                                            </div>
-
-                                            {/* Listado de Empresas Colapsable con switches de permisos */}
-                                            {usage > 0 && (
-                                                <div style={{ marginTop: 2, marginBottom: 10 }}>
-                                                    <details style={{ cursor: 'pointer' }}>
-                                                        <summary style={{ fontSize: '0.78rem', color: theme.primary, fontWeight: 700, outline: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                            <span>📁 Ver listado de clientes y permisos</span>
-                                                        </summary>
-                                                        <div style={{ 
-                                                            marginTop: 8, 
-                                                            padding: '8px 12px', 
-                                                            background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
-                                                            borderRadius: 12,
-                                                            border: `1px solid ${theme.border}`,
-                                                            display: 'flex',
-                                                            flexDirection: 'column',
-                                                            gap: 12
-                                                        }}>
-                                                            {(empresas[acc.id_usuario] || []).map((emp: any, idx: number, arr: any[]) => (
-                                                                <div key={emp.id} style={{ 
-                                                                    display: 'flex', 
-                                                                    flexDirection: 'column',
-                                                                    gap: 6,
-                                                                    paddingBottom: idx === arr.length - 1 ? 0 : 8,
-                                                                    borderBottom: idx === arr.length - 1 ? 'none' : `1px solid ${theme.border}`
-                                                                }}>
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', gap: 10 }}>
-                                                                         <span style={{ fontWeight: 700, color: theme.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                             🏢 {emp.nombre_empresa}
-                                                                         </span>
-                                                                         <span style={{ color: theme.textSec, fontFamily: 'monospace', flexShrink: 0 }}>
-                                                                             RUC: {emp.ruc_empresa}
-                                                                         </span>
-                                                                    </div>
-                                                                    {/* Switches de Licencias y Reasignación */}
-                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
-                                                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                                                            {[
-                                                                                { key: 'permiso_reportes_pdf', label: '📊 Reportes' },
-                                                                                { key: 'permiso_descarga_ats', label: '🧾 ATS' },
-                                                                                { key: 'permiso_comunicacion_cliente', label: '✉️ Mailer' }
-                                                                            ].map(p => {
-                                                                                const active = !!emp[p.key];
-                                                                                return (
-                                                                                    <button
-                                                                                        key={p.key}
-                                                                                        onClick={(e) => {
-                                                                                            e.preventDefault();
-                                                                                            e.stopPropagation();
-                                                                                            updateCompanyPermission(emp.id, acc.id_usuario, p.key, !active);
-                                                                                        }}
-                                                                                        style={{
-                                                                                            fontSize: '0.68rem',
-                                                                                            padding: '4px 8px',
-                                                                                            borderRadius: '6px',
-                                                                                            cursor: 'pointer',
-                                                                                            background: active ? theme.primary + '15' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                                                                                            color: active ? theme.primary : theme.textSec,
-                                                                                            fontWeight: active ? 800 : 500,
-                                                                                            border: active ? `1px solid ${theme.primary}40` : `1px solid ${theme.border}`,
-                                                                                            display: 'inline-flex',
-                                                                                            alignItems: 'center',
-                                                                                            gap: 4
-                                                                                        }}
-                                                                                    >
-                                                                                        {p.label}
-                                                                                    </button>
-                                                                                );
-                                                                            })}
-                                                                        </div>
-
-                                                                        <select
-                                                                            value={emp.id_usuario || ''}
-                                                                            onChange={e => reassignCompany(emp.id, e.target.value)}
-                                                                            onClick={e => e.stopPropagation()}
-                                                                            style={{
-                                                                                padding: '4px 8px',
-                                                                                borderRadius: '8px',
-                                                                                border: `1px solid ${theme.border}`,
-                                                                                background: theme.card,
-                                                                                color: theme.text,
-                                                                                fontSize: '0.68rem',
-                                                                                fontWeight: 700,
-                                                                                cursor: 'pointer',
-                                                                                outline: 'none',
-                                                                                maxWidth: '140px'
-                                                                            }}
-                                                                        >
-                                                                            <option value="">Reasignar...</option>
-                                                                            {accountants.map(a => (
-                                                                                <option key={a.id_usuario} value={a.id_usuario}>
-                                                                                    {a.nombre_completo}
-                                                                                </option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </details>
-                                                </div>
-                                            )}
-
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 900, fontSize: '0.9rem' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ACTUAL</span>
-                                                    <span style={{ color: theme.primary }}>${totalActual.toFixed(2)}</span>
-                                                </div>
-                                                <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-                                                    <span style={{ fontSize: '0.65rem', color: theme.textSec }}>COBRO ESPERADO</span>
-                                                    <span style={{ color: theme.textSec }}>${totalProyectado.toFixed(2)}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-                </>
-            ) : (
-                /* VISTA DE TABLA REPORTE DE EMPRESAS - SOLO LECTURA */
-                <>
-                    <div style={{ ...cardStyle, display: 'flex', gap: 12, marginBottom: 24 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
-                        <input 
-                            type="text" 
-                            placeholder="Buscar empresa por nombre, RUC o contador..." 
-                            value={companySearchTerm}
-                            onChange={e => setCompanySearchTerm(e.target.value)}
-                            style={{ ...inputStyle, flex: 1, border: 'none' }}
-                        />
-                    </div>
-
-                    {allCompanies.length === 0 ? (
-                        <div style={{ ...cardStyle, textAlign: 'center', padding: 40, border: `2px dashed ${theme.border}` }}>
-                            <p style={{ color: theme.textSec, fontWeight: 800 }}>No hay empresas registradas.</p>
-                        </div>
-                    ) : (
-                        <div style={{ ...cardStyle, overflowX: 'auto', padding: 0, borderRadius: 20, border: `1px solid ${theme.border}` }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: `1px solid ${theme.border}`, background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>EMPRESA</th>
-                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>RUC</th>
-                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>LOGO</th>
-                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px' }}>CONTADOR ASOCIADO</th>
-                                        <th style={{ padding: '16px 20px', fontSize: '0.75rem', fontWeight: 900, color: theme.textSec, letterSpacing: '1px', textAlign: 'center' }}>PERMISOS</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {allCompanies.filter(c => {
-                                        const owner = accountants.find(a => a.id_usuario === c.id_usuario);
-                                        const search = companySearchTerm.toLowerCase();
-                                        return (
-                                            (c.nombre_empresa || '').toLowerCase().includes(search) ||
-                                            (c.ruc_empresa || '').toLowerCase().includes(search) ||
-                                            (owner?.nombre_completo || '').toLowerCase().includes(search) ||
-                                            (owner?.email || '').toLowerCase().includes(search)
-                                        );
-                                    }).map((c, idx) => {
-                                        const ownerProfile = accountants.find(a => a.id_usuario === c.id_usuario);
-                                        const hasLogo = !!c.logo_url;
-                                        
-                                        return (
-                                            <tr key={c.id} style={{ borderBottom: `1px solid ${theme.border}`, background: idx % 2 === 0 ? 'transparent' : (isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.01)') }}>
-                                                <td style={{ padding: '16px 20px', fontWeight: 800, color: theme.text }}>
-                                                    🏢 {c.nombre_empresa}
-                                                </td>
-                                                <td style={{ padding: '16px 20px', fontFamily: 'monospace', color: theme.textSec }}>
-                                                    {c.ruc_empresa || 'N/A'}
-                                                </td>
-                                                <td style={{ padding: '16px 20px' }}>
-                                                    {hasLogo ? (
-                                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', background: '#10b98115', color: '#10b981', border: '1px solid #10b98130' }}>
-                                                            ✓ Con Logo
-                                                        </span>
-                                                    ) : (
-                                                        <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 8px', borderRadius: '6px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', color: theme.textSec, border: `1px solid ${theme.border}` }}>
-                                                            ✗ Sin Logo
-                                                        </span>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '16px 20px' }}>
-                                                    {ownerProfile ? (
-                                                        <div>
-                                                            <div style={{ fontWeight: 750, fontSize: '0.85rem' }}>{ownerProfile.nombre_completo}</div>
-                                                            <div style={{ fontSize: '0.75rem', color: theme.textSec }}>{ownerProfile.email}</div>
-                                                        </div>
-                                                    ) : (
-                                                        <span style={{ color: theme.danger, fontWeight: 700, fontSize: '0.82rem' }}>⚠️ ID Huérfano: {c.id_usuario}</span>
-                                                    )}
-                                                </td>
-                                                <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                                                    <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-                                                        {[
-                                                            { key: 'permiso_reportes_pdf', label: '📊 Reportes' },
-                                                            { key: 'permiso_descarga_ats', label: '🧾 ATS' },
-                                                            { key: 'permiso_comunicacion_cliente', label: '✉️ Mailer' }
-                                                        ].map(p => {
-                                                            const active = !!c[p.key];
-                                                            return (
-                                                                <span
-                                                                    key={p.key}
-                                                                    style={{
-                                                                        fontSize: '0.68rem',
-                                                                        padding: '4px 8px',
-                                                                        borderRadius: '6px',
-                                                                        background: active ? theme.primary + '15' : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                                                                        color: active ? theme.primary : theme.textSec,
-                                                                        fontWeight: active ? 800 : 500,
-                                                                        border: active ? `1px solid ${theme.primary}30` : `1px solid ${theme.border}`,
-                                                                        opacity: active ? 1 : 0.4,
-                                                                        userSelect: 'none'
-                                                                    }}
-                                                                >
-                                                                    {p.label}
-                                                                </span>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </>
-            )}
+            {activeSubTab === 'eliminaciones' && <EliminacionesTab />}
+            {activeSubTab === 'storage' && <StorageMonitorTab />}
+            {activeSubTab === 'calendario' && <SriCalendarioTab />}
+            {activeSubTab === 'plantilla-cuentas' && <PlantillaCuentasTab />}
+            {activeSubTab === 'logs-functions' && <EdgeFunctionLogsTab />}
+            {activeSubTab === 'calculadora-roi' && <RoiCalculatorTab />}
 
             {/* MODAL DE IMPERSONACIÓN PREMIUM */}
-            {impersonateModal && impersonateModal.isOpen && (
+            <ImpersonateModal
+                isOpen={!!(impersonateModal && impersonateModal.isOpen)}
+                email={impersonateModal?.email || ''}
+                actionLink={impersonateModal?.actionLink}
+                loading={!!impersonateModal?.loading}
+                error={impersonateModal?.error}
+                onClose={() => setImpersonateModal(null)}
+                onGenerate={async () => {
+                    if (!impersonateModal) return;
+                    setImpersonateModal(prev => prev ? { ...prev, loading: true } : null);
+                    try {
+                        const { data, error } = await supabaseContable.functions.invoke('impersonate-user', {
+                            body: { email: impersonateModal.email }
+                        });
+                        if (error) {
+                            console.error("Error completo de Edge Function:", error);
+                            let detailMsg = "";
+                            try {
+                                const text = await error.context?.text();
+                                if (text) {
+                                    const parsed = JSON.parse(text);
+                                    detailMsg = parsed.error || parsed.message;
+                                }
+                            } catch (e) {
+                                console.error("No se pudo parsear el error context:", e);
+                            }
+                            throw new Error(detailMsg || error.message || "Error al invocar Edge Function");
+                        }
+                        if (data?.action_link) {
+                            setImpersonateModal(prev => prev ? { ...prev, loading: false, actionLink: data.action_link } : null);
+                        } else {
+                            throw new Error('No se recibió enlace de retorno.');
+                        }
+                    } catch (err: any) {
+                        setImpersonateModal(prev => prev ? { ...prev, loading: false, error: err.message || 'Error en Edge Function' } : null);
+                    }
+                }}
+                theme={theme}
+                isDark={isDark}
+            />
+
+            {/* MODAL PERSONALIZADO DE CONFIRMACIÓN DE ELIMINACIÓN DE CONTADOR */}
+            {deleteAccountantModal && (
               <div style={{
                 position: 'fixed',
                 top: 0, left: 0, right: 0, bottom: 0,
@@ -710,7 +555,7 @@ export const ContableManager = () => {
                 justifyContent: 'center',
                 zIndex: 2147483647,
                 padding: 16
-              }} onClick={() => !impersonateModal.loading && setImpersonateModal(null)}>
+              }} onClick={() => setDeleteAccountantModal(null)}>
                 <div style={{
                   background: isDark ? '#1e293b' : '#ffffff',
                   border: `1px solid ${theme.border}`,
@@ -720,183 +565,164 @@ export const ContableManager = () => {
                   boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
                   overflow: 'hidden',
                   padding: '32px 24px',
-                  textAlign: 'center',
                   color: theme.text
                 }} onClick={e => e.stopPropagation()}>
                   
-                  {/* Header Icon */}
+                  {/* Localhost header style from mockup */}
                   <div style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: '50%',
-                    background: impersonateModal.error 
-                      ? 'rgba(239, 68, 68, 0.15)' 
-                      : (impersonateModal.actionLink ? 'rgba(16, 185, 129, 0.15)' : 'rgba(139, 92, 246, 0.15)'),
-                    color: impersonateModal.error 
-                      ? 'rgb(239, 68, 68)' 
-                      : (impersonateModal.actionLink ? 'rgb(16, 185, 129)' : 'rgb(139, 92, 246)'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 20px',
-                    fontSize: '1.8rem',
-                    fontWeight: 'bold'
+                    textAlign: 'left',
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: isDark ? '#e2e8f0' : '#1e293b',
+                    marginBottom: 20
                   }}>
-                    {impersonateModal.error ? '✗' : (impersonateModal.actionLink ? '✓' : '🎭')}
+                    localhost:5175 dice
                   </div>
 
-                  <h3 style={{ margin: '0 0 8px', fontSize: '1.3rem', fontWeight: 900 }}>
-                    {impersonateModal.error 
-                      ? 'Error de Conexión' 
-                      : (impersonateModal.actionLink ? 'Sesión Lista' : 'Impersonar Usuario')}
-                  </h3>
+                  {/* Warning and question */}
+                  <div style={{
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    color: theme.text,
+                    lineHeight: '1.5',
+                    marginBottom: 24,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 12
+                  }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+                      <span style={{ fontWeight: 700 }}>
+                        ¿Estás seguro de que deseas eliminar al contador "{deleteAccountantModal.nombre_completo || deleteAccountantModal.email}"?
+                      </span>
+                    </div>
+                    <div style={{ paddingLeft: 22, color: theme.textSec }}>
+                      Esta acción eliminará su perfil de la base de datos de Prospera Pymes.
+                    </div>
+                  </div>
 
-                  <p style={{ margin: '0 0 24px', fontSize: '0.9rem', color: theme.textSec, lineHeight: 1.5 }}>
-                    {impersonateModal.error ? (
-                      `Ocurrió un error al generar el enlace de acceso: ${impersonateModal.error}`
-                    ) : impersonateModal.actionLink ? (
-                      `El enlace de acceso para ${impersonateModal.email} se generó con éxito. Haz clic abajo para ingresar.`
-                    ) : (
-                      `Estás a punto de generar un acceso de administrador temporal para la cuenta de ${impersonateModal.email}. Cualquier cambio afectará la información real en producción.`
-                    )}
-                  </p>
+                  {/* Actions (Pill style buttons from mockup) */}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 28 }}>
+                    <button
+                      onClick={confirmDeleteAccountant}
+                      style={{
+                        background: '#7c3040', // Burgundy color
+                        color: '#ffffff',
+                        border: '2px solid #7c3040',
+                        padding: '10px 28px',
+                        borderRadius: 24,
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      Aceptar
+                    </button>
+                    <button
+                      onClick={() => setDeleteAccountantModal(null)}
+                      style={{
+                        background: '#fbcfe8', // Pink background
+                        color: '#7c3040',      // Burgundy text
+                        border: 'none',
+                        padding: '10px 28px',
+                        borderRadius: 24,
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                  {/* Actions */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {impersonateModal.error ? (
-                      <button
-                        onClick={() => setImpersonateModal(null)}
-                        style={{
-                          background: 'rgb(239, 68, 68)',
-                          color: '#fff',
-                          border: 'none',
-                          width: '100%',
-                          padding: '14px',
-                          borderRadius: 14,
-                          cursor: 'pointer',
-                          fontWeight: 800,
-                          fontSize: '0.95rem'
-                        }}
-                      >
-                        Cerrar
-                      </button>
-                    ) : impersonateModal.actionLink ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            window.open(impersonateModal.actionLink, '_blank');
-                            setImpersonateModal(null);
-                          }}
-                          style={{
-                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                            color: '#fff',
-                            border: 'none',
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: 14,
-                            cursor: 'pointer',
-                            fontWeight: 800,
-                            fontSize: '0.95rem',
-                            boxShadow: '0 4px 15px rgba(16, 185, 129, 0.25)'
-                          }}
-                        >
-                          Ingresar a la Cuenta
-                        </button>
-                        <button
-                          onClick={() => setImpersonateModal(null)}
-                          style={{
-                            background: 'transparent',
-                            color: theme.textSec,
-                            border: `1px solid ${theme.border}`,
-                            width: '100%',
-                            padding: '12px',
-                            borderRadius: 14,
-                            cursor: 'pointer',
-                            fontWeight: 700,
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={async () => {
-                            setImpersonateModal(prev => prev ? { ...prev, loading: true } : null);
-                            try {
-                              const { data, error } = await supabaseContable.functions.invoke('impersonate-user', {
-                                body: { email: impersonateModal.email }
-                              });
-                              if (error) {
-                                console.error("Error completo de Edge Function:", error);
-                                let detailMsg = "";
-                                try {
-                                  const text = await error.context?.text();
-                                  if (text) {
-                                    const parsed = JSON.parse(text);
-                                    detailMsg = parsed.error || parsed.message;
-                                  }
-                                } catch (e) {
-                                  console.error("No se pudo parsear el error context:", e);
-                                }
-                                throw new Error(detailMsg || error.message || "Error al invocar Edge Function");
-                              }
-                              if (data?.action_link) {
-                                setImpersonateModal(prev => prev ? { ...prev, loading: false, actionLink: data.action_link } : null);
-                              } else {
-                                throw new Error('No se recibió enlace de retorno.');
-                              }
-                            } catch (err: any) {
-                              setImpersonateModal(prev => prev ? { ...prev, loading: false, error: err.message || 'Error en Edge Function' } : null);
-                            }
-                          }}
-                          disabled={impersonateModal.loading}
-                          style={{
-                            background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-                            color: '#fff',
-                            border: 'none',
-                            width: '100%',
-                            padding: '14px',
-                            borderRadius: 14,
-                            cursor: impersonateModal.loading ? 'not-allowed' : 'pointer',
-                            fontWeight: 800,
-                            fontSize: '0.95rem',
-                            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.25)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8
-                          }}
-                        >
-                          {impersonateModal.loading ? (
-                            <>
-                              <Loader2 className="animate-spin" size={16} />
-                              Generando enlace...
-                            </>
-                          ) : (
-                            'Generar Acceso e Ingresar'
-                          )}
-                        </button>
-                        <button
-                          onClick={() => setImpersonateModal(null)}
-                          disabled={impersonateModal.loading}
-                          style={{
-                            background: 'transparent',
-                            color: theme.textSec,
-                            border: `1px solid ${theme.border}`,
-                            width: '100%',
-                            padding: '12px',
-                            borderRadius: 14,
-                            cursor: impersonateModal.loading ? 'not-allowed' : 'pointer',
-                            fontWeight: 700,
-                            fontSize: '0.9rem'
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                      </>
-                    )}
+            {/* MODAL PERSONALIZADO DE ÉXITO DE ELIMINACIÓN DE CONTADOR */}
+            {deleteSuccessModal && (
+              <div style={{
+                position: 'fixed',
+                top: 0, left: 0, right: 0, bottom: 0,
+                background: 'rgba(15, 23, 42, 0.75)',
+                backdropFilter: 'blur(12px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2147483647,
+                padding: 16
+              }} onClick={() => setDeleteSuccessModal(null)}>
+                <div style={{
+                  background: isDark ? '#1e293b' : '#ffffff',
+                  border: `1px solid ${theme.border}`,
+                  borderRadius: 24,
+                  width: '100%',
+                  maxWidth: 440,
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)',
+                  overflow: 'hidden',
+                  padding: '32px 24px',
+                  color: theme.text
+                }} onClick={e => e.stopPropagation()}>
+                  
+                  {/* Localhost header style from mockup */}
+                  <div style={{
+                    textAlign: 'left',
+                    fontSize: '1.05rem',
+                    fontWeight: 700,
+                    color: isDark ? '#e2e8f0' : '#1e293b',
+                    marginBottom: 20
+                  }}>
+                    localhost:5175 dice
+                  </div>
+
+                  {/* Success message from mockup */}
+                  <div style={{
+                    textAlign: 'left',
+                    fontSize: '0.9rem',
+                    color: theme.text,
+                    lineHeight: '1.5',
+                    marginBottom: 24,
+                    display: 'flex',
+                    gap: 8,
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>✅</span>
+                    <span>
+                      {deleteSuccessModal}
+                    </span>
+                  </div>
+
+                  {/* Actions (Pill style button on the right) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 28 }}>
+                    <button
+                      onClick={() => setDeleteSuccessModal(null)}
+                      style={{
+                        background: '#7c3040', // Burgundy color
+                        color: '#ffffff',
+                        border: '2px solid #7c3040',
+                        padding: '10px 28px',
+                        borderRadius: 24,
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      Aceptar
+                    </button>
                   </div>
                 </div>
               </div>

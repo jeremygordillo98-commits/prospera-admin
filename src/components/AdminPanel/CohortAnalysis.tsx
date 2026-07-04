@@ -17,9 +17,9 @@ export default function CohortAnalysis() {
         queryKey: ['cohort_analysis'],
         queryFn: async () => {
             // 1. Fetch users (perfiles)
-            const { data: perfiles } = await supabase.from('perfiles').select('user_id, creado_en');
+            const { data: perfiles } = await supabase.from('perfiles').select('id, creado_en');
             // 2. Fetch transactions
-            const { data: transacciones } = await supabase.from('transacciones').select('user_id, fecha');
+            const { data: transacciones } = await supabase.from('transacciones').select('usuario_id, fecha');
 
             return { perfiles: perfiles || [], transacciones: transacciones || [] };
         }
@@ -32,22 +32,22 @@ export default function CohortAnalysis() {
         // map transacciones by user
         const txByUser = new Map<string, string[]>();
         transacciones.forEach(tx => {
-            const arr = txByUser.get(tx.user_id) || [];
+            const arr = txByUser.get(tx.usuario_id) || [];
             arr.push(tx.fecha);
-            txByUser.set(tx.user_id, arr);
+            txByUser.set(tx.usuario_id, arr);
         });
 
         // Group users by signup month
         const cohortsMap = new Map<string, { total: number, users: { id: string, date: Date }[] }>();
 
         perfiles.forEach(p => {
-            if (!p.user_id || !p.creado_en) return;
+            if (!p.id || !p.creado_en) return;
             const date = new Date(p.creado_en);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             
             const current = cohortsMap.get(monthKey) || { total: 0, users: [] };
             current.total += 1;
-            current.users.push({ id: p.user_id, date });
+            current.users.push({ id: p.id, date });
             cohortsMap.set(monthKey, current);
         });
 
