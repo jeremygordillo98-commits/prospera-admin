@@ -98,18 +98,8 @@ export const ContableManager = () => {
             if (fetchError) throw fetchError;
 
             const profiles = (data || []).filter(p => p.rol !== 'admin');
-            const newCounts: any = {};
-            const newEmpresas: any = {};
-            for (const acc of profiles) {
-                const { data: empData } = await supabaseContable
-                    .from('empresas_gestionadas')
-                    .select('id, nombre_empresa, ruc_empresa, permiso_reportes_pdf, permiso_descarga_ats, permiso_comunicacion_cliente')
-                    .eq('id_usuario', acc.id_usuario);
-                newCounts[acc.id_usuario] = empData?.length || 0;
-                newEmpresas[acc.id_usuario] = empData || [];
-            }
 
-            const { data: allCompanies, error: errAll } = await supabaseContable
+            const { data: allCompanies } = await supabaseContable
                 .from('empresas_gestionadas')
                 .select('*')
                 .order('nombre_empresa');
@@ -117,6 +107,21 @@ export const ContableManager = () => {
             const { data: colabData } = await supabaseContable
                 .from('colaboradores_empresa')
                 .select('*');
+
+            const newCounts: any = {};
+            const newEmpresas: any = {};
+            for (const acc of profiles) {
+                const owned = (allCompanies || []).filter(c => c.id_usuario === acc.id_usuario);
+                const colabCompanyIds = (colabData || [])
+                    .filter(col => col.id_usuario === acc.id_usuario)
+                    .map(col => col.id_empresa);
+                const collaborated = (allCompanies || []).filter(c => colabCompanyIds.includes(c.id));
+                const combined = [...owned, ...collaborated];
+                const unique = combined.filter((val, index, self) => self.findIndex(t => t.id === val.id) === index);
+
+                newCounts[acc.id_usuario] = unique.length;
+                newEmpresas[acc.id_usuario] = unique;
+            }
 
             return { profiles, counts: newCounts, empresas: newEmpresas, allCompanies: allCompanies || [], colaboradores: colabData || [] };
         }
@@ -293,11 +298,11 @@ export const ContableManager = () => {
             
             // Actualizar estado localmente
             setEmpresas(prev => {
-                const list = prev[ownerId] || [];
-                return {
-                    ...prev,
-                    [ownerId]: list.map(emp => emp.id === companyId ? { ...emp, [field]: value } : emp)
-                };
+                const copy = { ...prev };
+                for (const key of Object.keys(copy)) {
+                    copy[key] = (copy[key] || []).map(emp => emp.id === companyId ? { ...emp, [field]: value } : emp);
+                }
+                return copy;
             });
             setAllCompanies(prev => prev.map(c => c.id === companyId ? { ...c, [field]: value } : c));
         } catch (err: any) {
