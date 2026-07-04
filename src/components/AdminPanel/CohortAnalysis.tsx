@@ -10,6 +10,13 @@ interface CohortData {
     retention: number[]; // Index is month offset (0, 1, 2...)
 }
 
+const formatMonthLabel = (monthKey: string, short: boolean = false) => {
+    const [year, month] = monthKey.split('-');
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const monthName = monthNames[parseInt(month) - 1];
+    return short ? `${monthName} ${year.substring(2)}` : `${monthName} ${year}`;
+};
+
 export default function CohortAnalysis() {
     const { theme, isDark } = useTheme();
 
@@ -55,7 +62,6 @@ export default function CohortAnalysis() {
         const sortedKeys = Array.from(cohortsMap.keys()).sort();
 
         // Calculate maximum months offset based on today
-        const today = new Date();
         const maxOffset = 6; // Let's show up to 6 months
 
         return sortedKeys.map(key => {
@@ -92,6 +98,30 @@ export default function CohortAnalysis() {
         });
     }, [rawData]);
 
+    const uniqueMonths = useMemo(() => {
+        if (cohorts.length === 0) return [];
+        const startStr = cohorts[0].month;
+        const [startY, startM] = startStr.split('-').map(Number);
+        
+        const today = new Date();
+        const endY = today.getFullYear();
+        const endM = today.getMonth() + 1;
+        
+        const list = [];
+        let y = startY;
+        let m = startM;
+        
+        while (y < endY || (y === endY && m <= endM)) {
+            list.push(`${y}-${String(m).padStart(2, '0')}`);
+            m += 1;
+            if (m > 12) {
+                m = 1;
+                y += 1;
+            }
+        }
+        return list;
+    }, [cohorts]);
+
     const cardStyle = {
         background: theme.card,
         border: `1px solid ${theme.border}`,
@@ -119,22 +149,37 @@ export default function CohortAnalysis() {
                         <tr>
                             <th style={{ padding: '12px', textAlign: 'left', borderBottom: `1px solid ${theme.border}`, color: theme.textSec, fontWeight: 800 }}>Cohorte</th>
                             <th style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${theme.border}`, color: theme.textSec, fontWeight: 800 }}>Usuarios</th>
-                            {[...Array(6)].map((_, i) => (
-                                <th key={i} style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${theme.border}`, color: theme.textSec, fontWeight: 800 }}>Mes {i}</th>
+                            {uniqueMonths.map(m => (
+                                <th key={m} style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${theme.border}`, color: theme.textSec, fontWeight: 800 }}>
+                                    {formatMonthLabel(m, true)}
+                                </th>
                             ))}
                         </tr>
                     </thead>
                     <tbody>
                         {cohorts.map((c) => (
                             <tr key={c.month}>
-                                <td style={{ padding: '12px', borderBottom: `1px solid ${theme.border}`, fontWeight: 700 }}>{c.month}</td>
+                                <td style={{ padding: '12px', borderBottom: `1px solid ${theme.border}`, fontWeight: 700 }}>
+                                    {formatMonthLabel(c.month)}
+                                </td>
                                 <td style={{ padding: '12px', textAlign: 'center', borderBottom: `1px solid ${theme.border}`, fontWeight: 800 }}>{c.totalUsers}</td>
-                                {c.retention.map((pct, i) => {
-                                    // Hide future months (where pct is 0 and it hasn't happened yet)
-                                    // A simple way is just to show the cell color based on percentage
+                                {uniqueMonths.map((colMonth) => {
+                                    const [cY, cM] = c.month.split('-').map(Number);
+                                    const [colY, colM] = colMonth.split('-').map(Number);
+                                    const offset = (colY - cY) * 12 + (colM - cM);
+
+                                    if (offset < 0 || offset >= c.retention.length) {
+                                        return (
+                                            <td key={colMonth} style={{ padding: '4px', borderBottom: `1px solid ${theme.border}`, textAlign: 'center', color: theme.textSec }}>
+                                                -
+                                            </td>
+                                        );
+                                    }
+
+                                    const pct = c.retention[offset];
                                     const opacity = Math.max(0.1, pct);
                                     return (
-                                        <td key={i} style={{ padding: '4px', borderBottom: `1px solid ${theme.border}`, textAlign: 'center' }}>
+                                        <td key={colMonth} style={{ padding: '4px', borderBottom: `1px solid ${theme.border}`, textAlign: 'center' }}>
                                             <div style={{ 
                                                 padding: '8px', 
                                                 background: pct > 0 ? `rgba(16, 185, 129, ${opacity})` : 'transparent',
@@ -151,7 +196,7 @@ export default function CohortAnalysis() {
                         ))}
                         {cohorts.length === 0 && (
                             <tr>
-                                <td colSpan={8} style={{ padding: '24px', textAlign: 'center', color: theme.textSec }}>No hay datos suficientes.</td>
+                                <td colSpan={uniqueMonths.length + 2} style={{ padding: '24px', textAlign: 'center', color: theme.textSec }}>No hay datos suficientes.</td>
                             </tr>
                         )}
                     </tbody>
