@@ -14,6 +14,7 @@ interface CampaignEditorFieldsProps {
     programado: boolean;
     scheduledDate: string;
     senderEmail: string;
+    autoAttachReport: string;
   };
   setCampanaForm: React.Dispatch<React.SetStateAction<{
     id: string;
@@ -26,6 +27,7 @@ interface CampaignEditorFieldsProps {
     programado: boolean;
     scheduledDate: string;
     senderEmail: string;
+    autoAttachReport: string;
   }>>;
   activeTemplate: string;
   setActiveTemplate: (template: string) => void;
@@ -314,6 +316,44 @@ export default function CampaignEditorFields({
               📢 Se enviará a todos los usuarios registrados en Prospera App (B2C).
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Selector de Auto-adjuntar Reporte Dinámico */}
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 16 }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: theme.textSec, marginBottom: 6 }}>Auto-adjuntar Reporte PDF Dinámico</label>
+          <select
+            value={campanaForm.autoAttachReport || ''}
+            disabled={sendingCampaign}
+            onChange={(e) => setCampanaForm(prev => ({ ...prev, autoAttachReport: e.target.value }))}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: isDark ? '#1e293b' : '#fff',
+              border: `1px solid ${theme.border}`,
+              borderRadius: 12,
+              padding: '12px 14px',
+              color: theme.text,
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">📎 Ninguno (Correo sin PDF dinámico)</option>
+            <option value="sri">📅 Alerta de Vencimiento SRI (PDF)</option>
+            <option value="weekly">📊 Reporte Semanal Financiero (PDF)</option>
+            <option value="monthly">🧾 Reporte Mensual de IVA (PDF)</option>
+          </select>
+        </div>
+        <div>
+          <div style={{ background: campanaForm.autoAttachReport ? theme.primary + '10' : 'rgba(100,116,139,0.05)', border: `1px solid ${campanaForm.autoAttachReport ? theme.primary + '20' : theme.border}`, borderRadius: 12, padding: 12, fontSize: '0.8rem', color: theme.text, fontWeight: 700, display: 'flex', alignItems: 'center', height: '100%', boxSizing: 'border-box' }}>
+            {campanaForm.autoAttachReport === 'sri' && '💡 Se generará un PDF de alerta de vencimiento SRI en base al RUC del cliente.'}
+            {campanaForm.autoAttachReport === 'weekly' && '💡 Se generará un PDF con los ingresos, egresos y saldos de la última semana.'}
+            {campanaForm.autoAttachReport === 'monthly' && '💡 Se generará un PDF con el resumen de IVA estimado del mes anterior.'}
+            {!campanaForm.autoAttachReport && '💡 No se adjuntará ningún reporte dinámico al correo.'}
+          </div>
         </div>
       </div>
 
