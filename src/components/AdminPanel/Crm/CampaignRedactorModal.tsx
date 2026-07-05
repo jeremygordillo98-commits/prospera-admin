@@ -37,7 +37,8 @@ export default function CampaignRedactorModal({
     testEmail: '',
     programado: false,
     scheduledDate: '',
-    senderEmail: 'soporte@prosperafinanzas.com'
+    senderEmail: 'soporte@prosperafinanzas.com',
+    autoAttachReport: ''
   });
 
   const [activeTemplate, setActiveTemplate] = useState('ventas_pymes');
@@ -68,7 +69,8 @@ export default function CampaignRedactorModal({
         testEmail: campaignToEdit.destinatarios === 'prueba' ? campaignToEdit.manual_emails || '' : '',
         programado: !!campaignToEdit.scheduled_at,
         scheduledDate: campaignToEdit.scheduled_at ? new Date(campaignToEdit.scheduled_at).toISOString().slice(0, 16) : '',
-        senderEmail: campaignToEdit.sender_email || 'soporte@prosperafinanzas.com'
+        senderEmail: campaignToEdit.sender_email || 'soporte@prosperafinanzas.com',
+        autoAttachReport: campaignToEdit.auto_attach_report || ''
       });
       if (campaignToEdit.plantilla_id) {
         setActiveTemplate(campaignToEdit.plantilla_id);
@@ -85,7 +87,8 @@ export default function CampaignRedactorModal({
         testEmail: '',
         programado: false,
         scheduledDate: '',
-        senderEmail: 'soporte@prosperafinanzas.com'
+        senderEmail: 'soporte@prosperafinanzas.com',
+        autoAttachReport: ''
       });
       setFilesList([]);
       setFilesBase64([]);
@@ -259,7 +262,8 @@ export default function CampaignRedactorModal({
         scheduled_at: (campanaForm.programado && campanaForm.scheduledDate) ? new Date(campanaForm.scheduledDate).toISOString() : null,
         sent_at: (esBorrador || campanaForm.programado) ? null : new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        sender_email: campanaForm.senderEmail
+        sender_email: campanaForm.senderEmail,
+        auto_attach_report: campanaForm.autoAttachReport || null
       };
 
       let campaignId = campanaForm.id;
@@ -318,7 +322,8 @@ export default function CampaignRedactorModal({
                 },
                 attachment: filesBase64.length > 0 ? filesBase64 : undefined,
                 scheduledAt: scheduledTime,
-                batchId: campaignId
+                batchId: campaignId,
+                autoAttachReport: campanaForm.autoAttachReport || undefined
               }
             });
 
