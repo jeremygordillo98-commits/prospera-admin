@@ -34,7 +34,7 @@ export const ContableManager = () => {
     const [accountants, setAccountants] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas' | 'eliminaciones' | 'storage' | 'calendario' | 'plantilla-cuentas' | 'logs-functions' | 'calculadora-roi'>('contadores');
+    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas' | 'eliminaciones' | 'storage' | 'calendario' | 'plantilla-cuentas' | 'calculadora-roi'>('contadores');
     const [companySearchTerm, setCompanySearchTerm] = useState('');
     
     // Auth Pymes
@@ -433,7 +433,6 @@ export const ContableManager = () => {
                   { id: 'storage', label: 'Storage', emoji: '📦' },
                   { id: 'calendario', label: 'Calendario SRI', emoji: '📅' },
                   { id: 'plantilla-cuentas', label: 'Plantilla Cuentas', emoji: '📋' },
-                  { id: 'logs-functions', label: 'Logs Funciones', emoji: '⚙️' },
                   { id: 'calculadora-roi', label: 'Calculadora ROI', emoji: '🧮' },
                 ].map(tab => {
                   const active = activeSubTab === tab.id;
@@ -503,7 +502,6 @@ export const ContableManager = () => {
             {activeSubTab === 'storage' && <StorageMonitorTab />}
             {activeSubTab === 'calendario' && <SriCalendarioTab />}
             {activeSubTab === 'plantilla-cuentas' && <PlantillaCuentasTab />}
-            {activeSubTab === 'logs-functions' && <EdgeFunctionLogsTab />}
             {activeSubTab === 'calculadora-roi' && <RoiCalculatorTab />}
 
             {/* MODAL DE IMPERSONACIÓN PREMIUM */}
