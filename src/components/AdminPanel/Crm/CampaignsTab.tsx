@@ -64,7 +64,7 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
 
   const cargarPlantilla = async (id: string) => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseContable
         .from('plantillas_correo_reportes')
         .select('*')
         .eq('id', id)
@@ -100,7 +100,7 @@ export default function CampaignsTab({ theme, isDark, isMobile }: CampaignsTabPr
   const guardarPlantilla = async () => {
     setSavingTemplate(true);
     try {
-      const { error } = await supabase
+      const { error } = await supabaseContable
         .from('plantillas_correo_reportes')
         .upsert({
           id: selectedTemplateId,
