@@ -8,7 +8,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   ScatterChart, Scatter, ZAxis, FunnelChart, Funnel, LabelList, Legend
 } from 'recharts';
-import { Users, Building2, TrendingUp, DollarSign, BarChart3, Loader2 } from 'lucide-react';
+import { Users, Building2, TrendingUp, DollarSign, BarChart3, Loader2, FileText } from 'lucide-react';
 
 export default function ReportsView() {
   const { theme, isDark } = useTheme();
@@ -18,6 +18,22 @@ export default function ReportsView() {
     ia: 3.0, // Precio agrupado para módulos IA (Chat, Magic, Insights)
     pro: 0.3, 
     base: 0.1 
+  });
+
+  // --- QUERY ECOSISTEMA GLOBAL (KPIs SISTEMA) ---
+  const { data: systemKPIs } = useQuery({
+    queryKey: ['reportsSystemKPIs'],
+    queryFn: async () => {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const { count: xmlsThisMonth } = await supabaseContable
+        .from('documentos_sri')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', startOfMonth);
+
+      return {
+        xmlsThisMonth: xmlsThisMonth || 0
+      };
+    }
   });
 
   // --- QUERY B2C ---
@@ -237,6 +253,49 @@ export default function ReportsView() {
           >
             🏢 Prospera Pymes (B2B)
           </button>
+        </div>
+      </div>
+
+      {/* TARJETAS EJECUTIVAS GLOBALES (RESUMEN ECOSISTEMA) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+        <div style={{ ...cardStyle, marginBottom: 0, borderLeft: `4px solid ${theme.primary}` }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ color: theme.textSec, fontSize: '0.7rem', fontWeight: 900 }}>TOTAL USUARIOS ECOSISTEMA</span>
+            <Users size={16} style={{ color: theme.primary }} />
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: theme.text }}>
+            {(data.length + (fetchedB2BData?.perfiles?.length || 0))}
+          </div>
+        </div>
+
+        <div style={{ ...cardStyle, marginBottom: 0, borderLeft: '4px solid #3b82f6' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ color: theme.textSec, fontSize: '0.7rem', fontWeight: 900 }}>EMPRESAS EN PYMES</span>
+            <Building2 size={16} style={{ color: '#3b82f6' }} />
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: theme.text }}>
+            {fetchedB2BData?.empresas?.length || 0}
+          </div>
+        </div>
+
+        <div style={{ ...cardStyle, marginBottom: 0, borderLeft: '4px solid #10b981' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ color: theme.textSec, fontSize: '0.7rem', fontWeight: 900 }}>XMLS PROCESADOS (MES)</span>
+            <FileText size={16} style={{ color: '#10b981' }} />
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: theme.text }}>
+            {systemKPIs?.xmlsThisMonth || 0}
+          </div>
+        </div>
+
+        <div style={{ ...cardStyle, marginBottom: 0, borderLeft: '4px solid #c084fc' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ color: theme.textSec, fontSize: '0.7rem', fontWeight: 900 }}>MRR COMBINADO ESTIMADO</span>
+            <DollarSign size={16} style={{ color: '#c084fc' }} />
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 900, color: theme.text }}>
+            ${(financialStatsB2C.mrr + financialStatsB2B.mrr).toFixed(2)}
+          </div>
         </div>
       </div>
 

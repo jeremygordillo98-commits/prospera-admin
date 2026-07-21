@@ -3,7 +3,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabase'; // <-- Importación necesaria para cerrar sesión
 import ControlView from './ControlView';
 import CommsView from './CommsView';
-import DashboardView from './DashboardView';
 import ReportsView from './ReportsView';
 import ConfigView from "./SysConfig";
 import { ContableManager } from './ContableManager';
@@ -22,8 +21,9 @@ const IconBriefcase = () => <svg width="20" height="20" viewBox="0 0 24 24" fill
 
 export default function AdminLayout() {
   const { theme, isDark } = useTheme();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'control' | 'pymes' | 'crm' | 'reportes' | 'comms' | 'config'>(() => {
-    return (localStorage.getItem('admin_active_tab') as any) || 'control';
+  const [activeTab, setActiveTab] = useState<'control' | 'pymes' | 'crm' | 'reportes' | 'comms' | 'config'>(() => {
+    const saved = localStorage.getItem('admin_active_tab');
+    return (saved && saved !== 'dashboard' ? saved : 'reportes') as any;
   });
 
   useEffect(() => {
@@ -38,7 +38,6 @@ export default function AdminLayout() {
   }, []);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Métricas', icon: <IconDashboard /> },
     { id: 'control', label: 'Usuarios', icon: <IconUsers /> },
     { id: 'pymes', label: 'Pymes', icon: <IconCalculator /> },
     { id: 'crm', label: 'Ventas', icon: <IconBriefcase /> },
@@ -159,7 +158,6 @@ export default function AdminLayout() {
       {/* CONTENIDO PRINCIPAL */}
       <main className="flex-1 p-6 lg:p-10 lg:px-16 overflow-y-auto max-w-[1600px] mx-auto w-full box-border">
         <div style={{ animation: 'slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-          {activeTab === 'dashboard' && <DashboardView />}
           {activeTab === 'control' && <ControlView />}
           {activeTab === 'pymes' && <ContableManager />}
           {activeTab === 'crm' && <CrmView />}

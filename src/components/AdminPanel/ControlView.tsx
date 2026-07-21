@@ -14,10 +14,12 @@ const IconKey = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none
 const IconSettings = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>;
 const IconEye = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>;
 
-const formatLastAccess = (dateStr?: string) => {
-  if (!dateStr) return 'Nunca';
+const formatLastAccess = (dateStr?: string, fallbackStr?: string) => {
+  const targetDate = dateStr || fallbackStr;
+  if (!targetDate) return 'Nunca';
   try {
-    const d = new Date(dateStr);
+    const d = new Date(targetDate);
+    if (isNaN(d.getTime())) return 'Nunca';
     return d.toLocaleString('es-EC', { 
       day: '2-digit', 
       month: 'short', 
@@ -262,29 +264,21 @@ export default function ControlView() {
                     return (
                         <div key={user.id} style={{ ...glassStyle, padding: 20, marginBottom: 0 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                                <div>
-                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', color: theme.text }}>{user.nombre_completo || '---'}</div>
-                                    <div style={{ fontSize: '0.85rem', color: theme.textSec, marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
-                                        {user.email}
-                                        {user.pais && <span style={{ background: theme.primary+'20', color: theme.primary, padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 800 }}>{user.pais}</span>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div style={{
+                                        width: 44, height: 44, borderRadius: '14px',
+                                        background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                        color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontWeight: 900, fontSize: '1.1rem', flexShrink: 0
+                                    }}>
+                                        {(user.nombre_completo || user.email || '?').charAt(0).toUpperCase()}
                                     </div>
-                                    {user.celular && (
-                                        <div style={{ marginTop: 6 }}>
-                                            <a href={`https://wa.me/${user.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, background: '#25D36615', color: '#25D366', padding: '4px 8px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 800 }}>
-                                                💬 Escribir al {user.celular}
-                                            </a>
+                                    <div>
+                                        <div style={{ fontWeight: 900, fontSize: '1.1rem', color: theme.text }}>{user.nombre_completo || 'Sin Nombre'}</div>
+                                        <div style={{ fontSize: '0.85rem', color: theme.textSec, marginTop: 2, display: 'flex', gap: 6, alignItems: 'center' }}>
+                                            {user.email}
+                                            {user.pais && <span style={{ background: theme.primary+'20', color: theme.primary, padding: '2px 6px', borderRadius: 4, fontSize: '0.65rem', fontWeight: 800 }}>{user.pais}</span>}
                                         </div>
-                                    )}
-                                    <div style={{ display: 'flex', gap: 6, marginTop: 8, alignItems: 'center' }}>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: theme.primary }}>{getLoyaltyInfo(user).days} días</span>
-                                        <span style={{ 
-                                            background: getLoyaltyInfo(user).bg, 
-                                            color: getLoyaltyInfo(user).color, 
-                                            border: `1px solid ${getLoyaltyInfo(user).border}`, 
-                                            padding: '2px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900 
-                                        }}>
-                                            {getLoyaltyInfo(user).label}
-                                        </span>
                                     </div>
                                 </div>
                                 <span style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}`, padding: '4px 10px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900 }}>{status.label}</span>
@@ -315,7 +309,7 @@ export default function ControlView() {
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Credenciales / Contacto</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Nivel Actual</th>
                             <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Billing ($)</th>
-                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Último Acceso</th>
+                            <th style={{ padding: '20px 24px', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Actividad / Registro</th>
                             <th style={{ padding: '20px 24px', textAlign: 'right', fontSize: '0.75rem', color: theme.textSec, textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 800 }}>Acceso</th>
                         </tr>
                     </thead>
@@ -324,7 +318,22 @@ export default function ControlView() {
                             const status = getUserStatus(user);
                             return (
                                 <tr key={user.id} style={{ borderBottom: idx === filteredUsers.length -1 ? 'none' : `1px solid ${theme.border}`, transition: 'all 0.2s' }} className="admin-row">
-                                    <td style={{ padding: '20px 24px', fontWeight: 800, fontSize: '0.95rem' }}>{user.nombre_completo || '---'}</td>
+                                    <td style={{ padding: '20px 24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{
+                                                width: 40, height: 40, borderRadius: '12px',
+                                                background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+                                                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontWeight: 900, fontSize: '0.95rem', flexShrink: 0,
+                                                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)'
+                                            }}>
+                                                {(user.nombre_completo || user.email || '?').charAt(0).toUpperCase()}
+                                            </div>
+                                            <div style={{ fontWeight: 800, fontSize: '0.95rem', color: theme.text }}>
+                                                {user.nombre_completo || 'Sin Nombre'}
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td style={{ padding: '20px 24px' }}>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                                             <div style={{ fontWeight: 900, fontSize: '1rem', color: theme.primary }}>{getLoyaltyInfo(user).days} días</div>
@@ -372,8 +381,17 @@ export default function ControlView() {
                                             />
                                         </div>
                                     </td>
-                                    <td style={{ padding: '20px 24px', fontWeight: 700, fontSize: '0.85rem', color: theme.textSec }}>
-                                        {formatLastAccess(user.ultimo_acceso)}
+                                    <td style={{ padding: '20px 24px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                            <div style={{ fontSize: '0.78rem', fontWeight: 800, color: user.ultimo_acceso ? theme.primary : theme.textSec }}>
+                                                <span style={{ fontSize: '0.68rem', color: theme.textSec, fontWeight: 700, textTransform: 'uppercase' }}>Login: </span>
+                                                {user.ultimo_acceso ? formatLastAccess(user.ultimo_acceso) : 'Nunca'}
+                                            </div>
+                                            <div style={{ fontSize: '0.72rem', color: theme.textSec, fontWeight: 600 }}>
+                                                <span style={{ fontSize: '0.68rem', color: theme.textSec, opacity: 0.8, textTransform: 'uppercase' }}>Reg: </span>
+                                                {user.creado_en ? new Date(user.creado_en).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) : '---'}
+                                            </div>
+                                        </div>
                                     </td>
                                     <td style={{ padding: '20px 24px', textAlign: 'right' }}>
                                         <div style={{display: 'flex', gap: 10, justifyContent: 'flex-end'}}>
