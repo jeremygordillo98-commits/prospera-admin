@@ -47,18 +47,51 @@ export const ControlFiltersHeader: React.FC<ControlFiltersHeaderProps> = ({
                 </div>
             </div>
 
-            {/* FILTROS INTELIGENTES */}
+            {/* BARRA DE FILTROS RÁPIDOS Y AUDITORÍA */}
             <div style={glassStyle}>
-                <div onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '10px', background: theme.primary + '15', color: theme.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔍</div>
-                        Filtros de Auditoría
-                    </h3>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>▼</div>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: 16, marginBottom: showFilters ? 20 : 0 }}>
+                    
+                    {/* BOTONES PILLS DE FILTRADO RÁPIDO */}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {[
+                            { id: 'todos', label: 'Todos' },
+                            { id: 'ultra', label: '🔮 Ultra' },
+                            { id: 'pro', label: '🟢 Pro' },
+                            { id: 'básico', label: '🔵 Básico' },
+                        ].map(p => {
+                            const active = planFilter === p.id;
+                            return (
+                                <button
+                                    key={p.id}
+                                    onClick={() => setPlanFilter(p.id)}
+                                    style={{
+                                        padding: '8px 18px',
+                                        borderRadius: '12px',
+                                        border: active ? `1px solid ${theme.primary}` : `1px solid ${theme.border}`,
+                                        background: active ? `${theme.primary}20` : (isDark ? 'rgba(15,23,42,0.4)' : 'rgba(255,255,255,0.8)'),
+                                        color: active ? theme.primary : theme.textSec,
+                                        fontWeight: 800,
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                        boxShadow: active ? `0 4px 12px ${theme.primary}25` : 'none'
+                                    }}
+                                >
+                                    {p.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* BOTÓN DESPLEGABLE DE BÚSQUEDA AVANZADA */}
+                    <div onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 800, color: theme.textSec }}>🔍 Filtros Avanzados</span>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: theme.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: showFilters ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>▼</div>
+                    </div>
                 </div>
                 
                 {showFilters && (
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginTop: 24, paddingTop: 24, borderTop: `1px solid ${theme.border}` }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginTop: 16, paddingTop: 20, borderTop: `1px solid ${theme.border}` }}>
                         <div>
                             <label style={{display: 'block', fontSize: '0.75rem', color: theme.textSec, marginBottom: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px'}}>Identificador / Email</label>
                             <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Ej. Alex Rivera" style={inputStyle} />

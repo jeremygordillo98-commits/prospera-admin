@@ -22,10 +22,12 @@ interface ContadoresTabProps {
     setSearchTerm: (val: string) => void;
 }
 
-const formatLastAccess = (dateStr?: string) => {
-  if (!dateStr) return 'Nunca';
+const formatLastAccess = (dateStr?: string, fallbackStr?: string) => {
+  const targetDate = dateStr || fallbackStr;
+  if (!targetDate) return 'Nunca';
   try {
-    const d = new Date(dateStr);
+    const d = new Date(targetDate);
+    if (isNaN(d.getTime())) return 'Nunca';
     return d.toLocaleString('es-EC', { 
       day: '2-digit', 
       month: 'short', 
@@ -99,8 +101,15 @@ export const ContadoresTab: React.FC<ContadoresTabProps> = ({
                                             style={{ ...inputStyle, width: '100%', fontWeight: 900, fontSize: '1.05rem' }}
                                         />
                                         <div style={{ fontSize: '0.8rem', color: theme.textSec, marginTop: 4 }}>{acc.email}</div>
-                                        <div style={{ fontSize: '0.72rem', color: theme.textSec, marginTop: 4, fontWeight: 700 }}>
-                                            Ingreso: {formatLastAccess(acc.ultimo_acceso)}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 6 }}>
+                                            <div style={{ fontSize: '0.74rem', color: acc.ultimo_acceso ? theme.primary : theme.textSec, fontWeight: 800 }}>
+                                                <span style={{ fontSize: '0.68rem', color: theme.textSec, fontWeight: 700, textTransform: 'uppercase' }}>Login: </span>
+                                                {acc.ultimo_acceso ? formatLastAccess(acc.ultimo_acceso) : 'Nunca'}
+                                            </div>
+                                            <div style={{ fontSize: '0.7rem', color: theme.textSec, fontWeight: 600 }}>
+                                                <span style={{ fontSize: '0.66rem', color: theme.textSec, opacity: 0.8, textTransform: 'uppercase' }}>Reg: </span>
+                                                {acc.created_at ? new Date(acc.created_at).toLocaleDateString('es-EC', { day: '2-digit', month: 'short', year: 'numeric' }) : '---'}
+                                            </div>
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', gap: 6 }}>
