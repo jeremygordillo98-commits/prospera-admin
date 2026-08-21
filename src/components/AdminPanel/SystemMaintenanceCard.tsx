@@ -28,6 +28,12 @@ interface SystemMaintenanceCardProps {
     setB2bBanner: React.Dispatch<React.SetStateAction<MaintBannerState>>;
     handleSaveB2bConfig: () => void;
     loadingB2bConfig: boolean;
+    pymesAppMaint: MaintBannerState;
+    setPymesAppMaint: React.Dispatch<React.SetStateAction<MaintBannerState>>;
+    pymesAppBanner: MaintBannerState;
+    setPymesAppBanner: React.Dispatch<React.SetStateAction<MaintBannerState>>;
+    handleSavePymesAppConfig: () => void;
+    loadingPymesAppConfig: boolean;
     theme: any;
     cardStyle: any;
     isDark: boolean;
@@ -53,6 +59,12 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
     setB2bBanner,
     handleSaveB2bConfig,
     loadingB2bConfig,
+    pymesAppMaint,
+    setPymesAppMaint,
+    pymesAppBanner,
+    setPymesAppBanner,
+    handleSavePymesAppConfig,
+    loadingPymesAppConfig,
     theme,
     cardStyle,
     isDark
@@ -284,11 +296,11 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
               </div>
             </div>
 
-            {/* CARD DE CONTROL REMOTO DE PROSPERA PYMES (B2B) */}
+            {/* CARD DE CONTROL REMOTO DE PROSPERA PYMES (B2B WEB) */}
             <div style={{ ...cardStyle, width: '100%', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Settings size={18} style={{ color: '#8b5cf6' }} /> Control Remoto de Prospera Pymes (B2B)
+                  <Settings size={18} style={{ color: '#8b5cf6' }} /> Control Remoto de Prospera Pymes (B2B Web)
                 </h3>
                 <button 
                   onClick={handleSaveB2bConfig}
@@ -308,12 +320,12 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
                     transition: 'all 0.2s'
                   }}
                 >
-                  <CheckCircle size={14} /> {loadingB2bConfig ? 'GUARDANDO...' : 'GUARDAR PYMES (B2B)'}
+                  <CheckCircle size={14} /> {loadingB2bConfig ? 'GUARDANDO...' : 'GUARDAR PYMES (B2B WEB)'}
                 </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
-                {/* MANTENIMIENTO PYMES */}
+                {/* MANTENIMIENTO PYMES WEB */}
                 <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>🛠️ Modo Mantenimiento</span>
@@ -333,7 +345,7 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
                     </button>
                   </div>
                   <p style={{ fontSize: '0.75rem', color: theme.textSec, margin: '0 0 10px 0' }}>
-                    Muestra pantalla de fuera de servicio y bloquea temporalmente el acceso de contadores.
+                    Muestra pantalla de fuera de servicio y bloquea temporalmente el acceso de contadores en la Web.
                   </p>
                   <input
                     type="text"
@@ -348,7 +360,7 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
                   />
                 </div>
 
-                {/* BANNER GLOBAL PYMES */}
+                {/* BANNER GLOBAL PYMES WEB */}
                 <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                     <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>🔔 Banner de Anuncio</span>
@@ -395,7 +407,124 @@ export const SystemMaintenanceCard: React.FC<SystemMaintenanceCardProps> = ({
                     </select>
                   </div>
                   <p style={{ fontSize: '0.72rem', color: theme.textSec, margin: 0 }}>
-                    Aviso fijado en el header superior de Prospera Pymes.
+                    Aviso fijado en el header superior de Prospera Pymes Web.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD DE CONTROL REMOTO DE PROSPERA PYMES APP (CLIENTE / MÓVIL) */}
+            <div style={{ ...cardStyle, width: '100%', boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Settings size={18} style={{ color: '#10b981' }} /> Control Remoto de Prospera Pymes App (Móvil / Cliente)
+                </h3>
+                <button 
+                  onClick={handleSavePymesAppConfig}
+                  disabled={loadingPymesAppConfig}
+                  style={{
+                    background: '#10b981',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '8px 16px',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <CheckCircle size={14} /> {loadingPymesAppConfig ? 'GUARDANDO...' : 'GUARDAR PYMES APP'}
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '20px' }}>
+                {/* MANTENIMIENTO PYMES APP */}
+                <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>🛠️ Modo Mantenimiento</span>
+                    <button
+                      onClick={() => setPymesAppMaint((prev: MaintBannerState) => ({ ...prev, activo: !prev.activo }))}
+                      style={{
+                        width: 44, height: 22, borderRadius: 999,
+                        background: pymesAppMaint.activo ? '#10b981' : theme.border,
+                        border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', padding: 0
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: 2, left: pymesAppMaint.activo ? 24 : 2,
+                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </button>
+                  </div>
+                  <p style={{ fontSize: '0.75rem', color: theme.textSec, margin: '0 0 10px 0' }}>
+                    Muestra pantalla de fuera de servicio en la app de clientes Pyme (Capacitor/Android/iOS/PWA).
+                  </p>
+                  <input
+                    type="text"
+                    value={pymesAppMaint.mensaje || ''}
+                    onChange={e => setPymesAppMaint((prev: MaintBannerState) => ({ ...prev, mensaje: e.target.value }))}
+                    placeholder="Mensaje de mantenimiento para la App Móvil..."
+                    style={{
+                      width: '100%', background: theme.card, color: theme.text,
+                      border: `1px solid ${theme.border}`, borderRadius: '8px',
+                      padding: '8px 12px', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* BANNER GLOBAL PYMES APP */}
+                <div style={{ background: theme.bg, padding: '20px', borderRadius: '20px', border: `1px solid ${theme.border}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>🔔 Banner de Anuncio</span>
+                    <button
+                      onClick={() => setPymesAppBanner((prev: MaintBannerState) => ({ ...prev, activo: !prev.activo }))}
+                      style={{
+                        width: 44, height: 22, borderRadius: 999,
+                        background: pymesAppBanner.activo ? '#10b981' : theme.border,
+                        border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.3s', padding: 0
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: 2, left: pymesAppBanner.activo ? 24 : 2,
+                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                      }} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                    <input
+                      type="text"
+                      value={pymesAppBanner.texto || ''}
+                      onChange={e => setPymesAppBanner((prev: MaintBannerState) => ({ ...prev, texto: e.target.value }))}
+                      placeholder="Texto del banner para la App Móvil..."
+                      style={{
+                        flex: 1, background: theme.card, color: theme.text,
+                        border: `1px solid ${theme.border}`, borderRadius: '8px',
+                        padding: '8px 12px', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box'
+                      }}
+                    />
+                    <select
+                      value={pymesAppBanner.tipo || 'info'}
+                      onChange={e => setPymesAppBanner((prev: MaintBannerState) => ({ ...prev, tipo: e.target.value }))}
+                      style={{
+                        background: theme.card, color: theme.text,
+                        border: `1px solid ${theme.border}`, borderRadius: '8px',
+                        padding: '8px', fontSize: '0.8rem', outline: 'none', cursor: 'pointer'
+                      }}
+                    >
+                      <option value="info">Info (Azul)</option>
+                      <option value="warning">Alerta (Amarillo)</option>
+                      <option value="success">Éxito (Verde)</option>
+                      <option value="danger">Crítico (Rojo)</option>
+                    </select>
+                  </div>
+                  <p style={{ fontSize: '0.72rem', color: theme.textSec, margin: 0 }}>
+                    Aviso fijado en la pantalla principal de Prospera Pymes App.
                   </p>
                 </div>
               </div>

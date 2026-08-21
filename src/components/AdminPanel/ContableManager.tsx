@@ -13,6 +13,7 @@ import RoiCalculatorTab from './RoiCalculatorTab';
 import { ContadoresTab } from './ContadoresTab';
 import { EmpresasTab } from './EmpresasTab';
 import { ImpersonateModal } from './ImpersonateModal';
+import { TreeViewB2B } from './TreeViewB2B';
 
 const formatLastAccess = (dateStr?: string) => {
   if (!dateStr) return 'Nunca';
@@ -34,7 +35,7 @@ export const ContableManager = () => {
     const [accountants, setAccountants] = useState<any[]>([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'empresas' | 'eliminaciones' | 'storage' | 'calendario' | 'plantilla-cuentas' | 'calculadora-roi'>('contadores');
+    const [activeSubTab, setActiveSubTab] = useState<'contadores' | 'arbol-b2b' | 'empresas' | 'eliminaciones' | 'storage' | 'calendario' | 'plantilla-cuentas' | 'calculadora-roi'>('contadores');
     const [companySearchTerm, setCompanySearchTerm] = useState('');
     
     // Auth Pymes
@@ -424,10 +425,11 @@ export const ContableManager = () => {
                 </button>
             </div>
 
-            {/* Selector de sub-pestañas */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24, borderBottom: `1px solid ${theme.border}`, paddingBottom: 16, flexWrap: 'wrap' }}>
+            {/* Selector de sub-pestañas adaptativo para Celular y Escritorio */}
+            <div className="w-full overflow-x-auto flex items-center gap-2.5 mb-6 pb-3 border-b border-slate-800 shrink-0" style={{ scrollbarWidth: 'none' }}>
                 {[
                   { id: 'contadores', label: 'Gestión de Contadores', emoji: '💼' },
+                  { id: 'arbol-b2b', label: '🌳 Árbol B2B', emoji: '🌳' },
                   { id: 'empresas', label: 'Clientes (Empresas)', emoji: '🏢' },
                   { id: 'eliminaciones', label: 'Eliminaciones', emoji: '🗑️' },
                   { id: 'storage', label: 'Storage', emoji: '📦' },
@@ -440,20 +442,15 @@ export const ContableManager = () => {
                     <button
                       key={tab.id}
                       onClick={() => setActiveSubTab(tab.id as any)}
+                      className="px-4 py-2.5 rounded-xl border-none font-extrabold text-xs cursor-pointer whitespace-nowrap shrink-0 transition-all flex items-center gap-2"
                       style={{
-                        padding: '10px 20px',
-                        borderRadius: 12,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '0.85rem',
-                        fontWeight: 800,
-                        transition: 'all 0.2s',
-                        background: active ? theme.primary : (isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'),
-                        color: active ? (isDark ? '#000' : '#fff') : theme.textSec,
-                        boxShadow: active ? `0 4px 15px ${theme.primary}30` : 'none'
+                        background: active ? theme.primary : `${theme.primary}12`,
+                        color: active ? '#ffffff' : theme.primary,
+                        boxShadow: active ? `0 4px 14px ${theme.primary}40` : 'none'
                       }}
                     >
-                      {tab.emoji} {tab.label}
+                      <span className="text-sm">{tab.emoji}</span>
+                      <span>{tab.label}</span>
                     </button>
                   );
                 })}
@@ -479,6 +476,22 @@ export const ContableManager = () => {
                     inputStyle={inputStyle}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
+                />
+            ) : activeSubTab === 'arbol-b2b' ? (
+                <TreeViewB2B
+                    accountants={accountants}
+                    empresas={empresas}
+                    allCompanies={allCompanies}
+                    colaboradoresGlobal={colaboradoresGlobal}
+                    counts={counts}
+                    theme={theme}
+                    isDark={isDark}
+                    cardStyle={cardStyle}
+                    inputStyle={inputStyle}
+                    handleImpersonate={handleImpersonate}
+                    handleResetPassword={handleResetPassword}
+                    updateLimit={updateLimit}
+                    reassignCompany={reassignCompany}
                 />
             ) : activeSubTab === 'empresas' ? (
                 <EmpresasTab
