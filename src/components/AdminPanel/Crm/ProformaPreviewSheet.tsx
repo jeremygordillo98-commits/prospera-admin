@@ -8,6 +8,7 @@ interface ProformaPreviewSheetProps {
     email: string;
     celular: string;
     validezDias: number;
+    senderEmail?: string;
   };
   items: Array<{ id: string; descripcion: string; cantidad: number; precioUnitario: number }>;
   descuento: number;
@@ -69,7 +70,7 @@ export default function ProformaPreviewSheet({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <img src="/logo-horizontal.png" alt="Prospera Logo" style={{ height: 18, objectFit: 'contain' }} />
+              <img src="/logo-proforma.png" alt="Prospera Logo" style={{ height: 26, objectFit: 'contain' }} />
             </div>
             <span style={{ fontSize: '0.55rem', fontWeight: 800, color: theme.primary, display: 'block', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               PROFORMA No. PR-{String(proformaIndex).padStart(5, '0')}
@@ -77,7 +78,8 @@ export default function ProformaPreviewSheet({
           </div>
           <div style={{ textAlign: 'right', fontSize: '0.6rem', color: theme.textSec, fontWeight: 600 }}>
             <div style={{ fontWeight: 800, color: isDark ? '#fff' : '#000' }}>PROSPERA ECUADOR S.A.S.</div>
-            <div>RUC: 1793123456001</div>
+            <div>Email: {cliente.senderEmail || 'soporte@prosperafinanzas.com'}</div>
+            <div>WhatsApp: +593 98 831 3486</div>
           </div>
         </div>
 

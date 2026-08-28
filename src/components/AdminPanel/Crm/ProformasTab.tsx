@@ -54,7 +54,7 @@ export default function ProformasTab({ theme, isDark, isMobile }: ProformasTabPr
       }
     };
 
-    convertUriToBase64('/logo-horizontal.png').then((base64) => {
+    convertUriToBase64('/logo-proforma.png').then((base64) => {
       if (base64) {
         setLogoBase64(base64);
       }
@@ -148,7 +148,7 @@ export default function ProformasTab({ theme, isDark, isMobile }: ProformasTabPr
           
           <div style="text-align: center; font-size: 11px; color: #94a3b8;">
             <p>Este correo electrónico fue generado automáticamente por Prospera CRM.</p>
-            <p>soporte@prosperapymes.com | +593 98 831 3486</p>
+            <p>${cliente.senderEmail || 'soporte@prosperafinanzas.com'} | +593 98 831 3486</p>
           </div>
         </div>
       `;
