@@ -7,6 +7,7 @@ export interface Cliente {
   email: string;
   celular: string;
   validezDias: number;
+  senderEmail?: string;
 }
 
 export interface Item {
@@ -40,10 +41,12 @@ export function generarPDFDocument(
   const lightGray = [100, 116, 139]; // slate-500
   const accentGreen = [240, 253, 244]; // bg-green-50
 
+  const emisorEmail = cliente.senderEmail || 'soporte@prosperafinanzas.com';
+
   // --- CABECERA DE MARCA ---
   if (logoBase64) {
-    // Dibujar logotipo horizontal real de Prospera (proporción 1.23:1 corregida)
-    doc.addImage(logoBase64, 'PNG', 20, 11, 22, 18);
+    // Dibujar logotipo horizontal real de Prospera (visible, nítido y proporcionado)
+    doc.addImage(logoBase64, 'PNG', 20, 13, 50, 14.2);
   } else {
     // Logotipo estilizado de Prospera (Fallback)
     doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -71,13 +74,13 @@ export function generarPDFDocument(
   doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('PROSPERA ECUADOR S.A.S.', 135, 19);
+  doc.text('PROSPERA ECUADOR S.A.S.', 130, 18);
   
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(lightGray[0], lightGray[1], lightGray[2]);
   doc.setFontSize(8);
-  doc.text('Email: soporte@prosperapymes.com', 135, 24);
-  doc.text('WhatsApp: +593 98 831 3486', 135, 29);
+  doc.text(`Email: ${emisorEmail}`, 130, 23);
+  doc.text('WhatsApp: +593 98 831 3486', 130, 28);
 
   // Separador
   doc.setDrawColor(226, 232, 240); // slate-200
@@ -243,7 +246,7 @@ export function generarPDFDocument(
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(lightGray[0], lightGray[1], lightGray[2]);
-  const pagoText = 'Para recibir los datos de transferencia específicos y registrar su pago, por favor póngase en contacto directo con nuestro equipo a través de correo electrónico (soporte@prosperapymes.com) o WhatsApp (+593 98 831 3486).';
+  const pagoText = `Para recibir los datos de transferencia específicos y registrar su pago, por favor póngase en contacto directo con nuestro equipo a través de correo electrónico (${emisorEmail}) o WhatsApp (+593 98 831 3486).`;
   doc.text(pagoText, 20, finalY + 5, { maxWidth: 80 });
   
   doc.setFont('helvetica', 'bold');

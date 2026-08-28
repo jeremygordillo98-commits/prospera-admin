@@ -43,7 +43,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   
   <div style="text-align: center; font-size: 11px; color: #94a3b8;">
     <p>Este correo electrónico fue generado automáticamente por Prospera CRM.</p>
-    <p>soporte@prosperapymes.com | +593 98 831 3486</p>
+    <p>soporte@prosperafinanzas.com | +593 98 831 3486</p>
   </div>
 </div>
     `.trim()
@@ -125,7 +125,7 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   
   <div style="text-align: center; font-size: 11px; color: #94a3b8;">
     <p>Este correo electrónico fue generado automáticamente por Prospera CRM.</p>
-    <p>soporte@prosperapymes.com | +593 98 831 3486</p>
+    <p>soporte@prosperafinanzas.com | +593 98 831 3486</p>
   </div>
 </div>
     `.trim()
