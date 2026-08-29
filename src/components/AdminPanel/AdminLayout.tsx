@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabase';
+import { supabaseContable } from '../../services/supabaseContable';
+import { soundService } from '../../utils/soundService';
+import { PushNotificationToggle } from './PushNotificationToggle';
 import ControlView from './ControlView';
 import CommsView from './CommsView';
 import ReportsView from './ReportsView';
@@ -8,7 +11,8 @@ import ConfigView from "./SysConfig";
 import { ContableManager } from './ContableManager';
 import CrmView from './CrmView';
 import AnaliticaView from './AnaliticaView';
-import { MoreHorizontal, X, LogOut, ChevronRight } from 'lucide-react';
+import { MoreHorizontal, X, LogOut, ChevronRight, BellRing, MessageSquare, ArrowRight } from 'lucide-react';
+
 
 // --- ÍCONOS SVG PREMIUM ---
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>;
@@ -29,10 +33,77 @@ export default function AdminLayout() {
   });
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [liveAlert, setLiveAlert] = useState<{
+    id: string;
+    title: string;
+    body: string;
+    origin: 'b2c' | 'b2b';
+  } | null>(null);
 
   useEffect(() => {
     localStorage.setItem('admin_active_tab', activeTab);
   }, [activeTab]);
+
+  // --- ESCUCHA EN TIEMPO REAL DUAL (SUPABASE B2C & SUPABASE B2B) ---
+  useEffect(() => {
+    // 1. Escuchar tickets de Soporte App (B2C)
+    const channelB2C = supabase
+      .channel('admin_live_tix_b2c')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'soporte_tickets' },
+        (payload) => {
+          const newTicket = payload.new;
+          if (newTicket && newTicket.origen === 'usuario') {
+            soundService.playNotification('ticket');
+            setLiveAlert({
+              id: newTicket.id || String(Date.now()),
+              title: '📨 Nuevo Ticket en Prospera App (B2C)',
+              body: newTicket.mensaje 
+                ? (newTicket.mensaje.length > 80 ? newTicket.mensaje.substring(0, 80) + '...' : newTicket.mensaje)
+                : 'Un usuario ha enviado un nuevo mensaje de soporte.',
+              origin: 'b2c'
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    // 2. Escuchar tickets de Soporte Pymes (B2B)
+    const channelB2B = supabaseContable
+      .channel('admin_live_tix_b2b')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'soporte_tickets' },
+        (payload) => {
+          const newTicket = payload.new;
+          if (newTicket && newTicket.origen === 'usuario') {
+            soundService.playNotification('ticket');
+            setLiveAlert({
+              id: newTicket.id || String(Date.now()),
+              title: '🏢 Nuevo Ticket en Pymes B2B',
+              body: newTicket.mensaje 
+                ? (newTicket.mensaje.length > 80 ? newTicket.mensaje.substring(0, 80) + '...' : newTicket.mensaje)
+                : 'Un contador o empresa ha enviado una solicitud de soporte.',
+              origin: 'b2b'
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channelB2C);
+      supabaseContable.removeChannel(channelB2B);
+    };
+  }, []);
+
+  // Auto-descartar alerta flotante tras 8 segundos
+  useEffect(() => {
+    if (!liveAlert) return;
+    const timer = setTimeout(() => setLiveAlert(null), 8000);
+    return () => clearTimeout(timer);
+  }, [liveAlert]);
 
   const menuItems = [
     { id: 'analitica', label: 'Analítica', icon: <IconActivity /> },
@@ -74,12 +145,62 @@ export default function AdminLayout() {
 
   return (
     <div
-      className="flex flex-col min-h-screen font-sans pb-20 lg:pb-0"
+      className="flex flex-col min-h-screen font-sans pb-20 lg:pb-0 relative"
       style={{
         background: theme.bg,
         color: theme.text,
       }}
     >
+
+      {/* 🔔 BANNER FLOTANTE DE ALERTA EN TIEMPO REAL (DUAL B2C / B2B) */}
+      {liveAlert && (
+        <div
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[500px] p-3.5 rounded-2xl shadow-2xl flex items-center justify-between gap-3 animate-slideDown"
+          style={{
+            background: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(20px)',
+            border: `1.5px solid ${theme.primary}`,
+            boxShadow: `0 15px 35px ${theme.primary}30`
+          }}
+        >
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 animate-bounce"
+              style={{ background: `${theme.primary}20`, color: theme.primary }}
+            >
+              <BellRing size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-extrabold text-xs tracking-tight flex items-center gap-1.5" style={{ color: theme.primary }}>
+                <span>{liveAlert.title}</span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 truncate m-0 font-medium">
+                {liveAlert.body}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                setActiveTab('comms');
+                setLiveAlert(null);
+              }}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold border-none cursor-pointer flex items-center gap-1 transition-all"
+              style={{ background: theme.primary, color: '#000' }}
+            >
+              <span>Ver</span>
+              <ArrowRight size={12} />
+            </button>
+            <button
+              onClick={() => setLiveAlert(null)}
+              className="w-7 h-7 rounded-lg border-none bg-transparent text-slate-400 hover:text-white cursor-pointer flex items-center justify-center"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* HEADER / TOP NAVIGATION */}
       <aside
@@ -109,11 +230,9 @@ export default function AdminLayout() {
               </div>
             </div>
 
-            {/* Logout button for smaller screens */}
+            {/* Mobile Actions (Push Toggle + Logout) */}
             <div className="flex items-center gap-2 lg:hidden">
-              <span className="text-[0.65rem] font-extrabold text-slate-400 px-2 py-1 rounded-lg bg-slate-800/60 border border-slate-700">
-                v4.1
-              </span>
+              <PushNotificationToggle compact />
               <button 
                 onClick={handleLogout} 
                 className="w-9 h-9 rounded-xl flex items-center justify-center cursor-pointer border-none" 
@@ -157,22 +276,27 @@ export default function AdminLayout() {
             })}
           </nav>
 
-          {/* DESKTOP LOGOUT & VERSION INFO */}
-          <div className="hidden lg:flex items-center gap-4 shrink-0">
+          {/* DESKTOP LOGOUT & PUSH NOTIFICATION CONTROLLER */}
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
+            <PushNotificationToggle compact />
+            
+            <div className="h-4 w-px bg-slate-700/50 mx-1" />
+
             <div className="text-[0.65rem] font-bold tracking-widest opacity-50 whitespace-nowrap" style={{ color: theme.textSec }}>
               ADMIN CORE v4.1
             </div>
             <button 
               onClick={handleLogout} 
-              className="border-none flex items-center gap-2 py-2 px-4 text-[0.9rem] font-bold cursor-pointer rounded-xl transition-all duration-200" 
+              className="border-none flex items-center gap-2 py-2 px-3.5 text-[0.85rem] font-bold cursor-pointer rounded-xl transition-all duration-200" 
               style={{ background: theme.danger + '10', color: theme.danger }} 
               onMouseOver={(e) => e.currentTarget.style.background = `${theme.danger}20`} 
               onMouseOut={(e) => e.currentTarget.style.background = `${theme.danger}10`}
             >
               <IconLogOut />
-              <span>Cerrar Sesión</span>
+              <span>Salir</span>
             </button>
           </div>
+
 
         </div>
       </aside>
@@ -334,6 +458,10 @@ export default function AdminLayout() {
           @keyframes slideIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes slideDown {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
           }
           @keyframes slideUp {
             from { opacity: 0; transform: translateY(100%); }
