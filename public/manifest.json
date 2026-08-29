@@ -1,14 +1,20 @@
 {
   "name": "Prospera Admin",
   "short_name": "ProsperaAdmin",
-  "description": "Panel de Control y Gestión para Prospera Finanzas.",
+  "description": "Panel de Control Root y Gestión para Prospera Finanzas.",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait",
-  "categories": ["finance", "productivity", "business"],
+  "prefer_related_applications": false,
+  "categories": [
+    "finance",
+    "productivity",
+    "business"
+  ],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -33,6 +39,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/screen-mobile.png",
+      "sizes": "540x1200",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Vista móvil de Prospera Admin"
+    },
+    {
+      "src": "/screenshots/screen-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Panel de Control Prospera Admin"
     }
   ]
 }
