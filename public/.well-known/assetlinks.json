@@ -1,0 +1,41 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.prosperafinanzas.admin.twa",
+      "sha256_cert_fingerprints": [
+        "C9:80:C2:F6:73:43:E5:C9:56:95:0E:69:76:A4:D8:F9:0C:2F:89:24:A6:10:96:19:02:B9:2D:5F:C2:A1:C6:61",
+        "8C:C6:B5:22:9B:AF:31:A7:1F:81:B2:7B:EB:01:79:5E:32:59:1E:95:31:39:75:5D:19:8C:6A:E1:BA:C9:08:BF"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.prosperafinanzas.admin",
+      "sha256_cert_fingerprints": [
+        "C9:80:C2:F6:73:43:E5:C9:56:95:0E:69:76:A4:D8:F9:0C:2F:89:24:A6:10:96:19:02:B9:2D:5F:C2:A1:C6:61",
+        "8C:C6:B5:22:9B:AF:31:A7:1F:81:B2:7B:EB:01:79:5E:32:59:1E:95:31:39:75:5D:19:8C:6A:E1:BA:C9:08:BF"
+      ]
+    }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.prosperafinanzas.app.twa",
+      "sha256_cert_fingerprints": [
+        "C9:80:C2:F6:73:43:E5:C9:56:95:0E:69:76:A4:D8:F9:0C:2F:89:24:A6:10:96:19:02:B9:2D:5F:C2:A1:C6:61",
+        "8C:C6:B5:22:9B:AF:31:A7:1F:81:B2:7B:EB:01:79:5E:32:59:1E:95:31:39:75:5D:19:8C:6A:E1:BA:C9:08:BF"
+      ]
+    }
+  }
+]
