@@ -7,6 +7,7 @@
   "scope": "/",
   "display": "standalone",
   "display_override": [
+    "tabbed",
     "window-controls-overlay",
     "standalone",
     "minimal-ui"
@@ -16,8 +17,15 @@
   "orientation": "portrait",
   "lang": "es",
   "dir": "ltr",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ec4e53b7",
   "prefer_related_applications": false,
-  "related_applications": [],
+  "related_applications": [
+    {
+      "platform": "play",
+      "id": "com.prosperafinanzas.admin",
+      "url": "https://play.google.com/store/apps/details?id=com.prosperafinanzas.admin"
+    }
+  ],
   "categories": [
     "finance",
     "productivity",
@@ -27,7 +35,7 @@
     "client_mode": ["navigate-existing", "auto"]
   },
   "scope_extensions": [
-    { "origin": "*.prosperafinanzas.com" },
+    { "origin": "https://prosperafinanzas.com" },
     { "origin": "https://admin.prosperafinanzas.com" },
     { "origin": "https://app.prosperafinanzas.com" }
   ],
@@ -42,6 +50,53 @@
           "src": "/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/",
+      "name": "Archivos Administrativos",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/pdf": [".pdf"]
+      }
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+prosperaadmin",
+      "url": "/?action=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "note_taking": {
+    "new_note_url": "/?note=new"
+  },
+  "widgets": [
+    {
+      "name": "Prospera Admin Widget",
+      "short_name": "AdminWidget",
+      "description": "Panel de administración rápido",
+      "tag": "prospera-admin-widget",
+      "template": "widget",
+      "ms_ac_template": "/widget.json",
+      "data": "/widget-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/screen-mobile.png",
+          "sizes": "540x1200",
+          "label": "Vista de widget admin"
         }
       ]
     }
