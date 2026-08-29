@@ -101,3 +101,7 @@ export const COLORS = [
   '#9e9e9e', '#bdbdbd', '#757575', '#424242', 
   '#607d8b', '#78909c', '#546e7a', '#37474f' 
 ];
+
+// --- LLAVE PÚBLICA VAPID WEB PUSH (FASE 17) ---
+export const VAPID_PUBLIC_KEY = 'BBOPxEKE8SXIXBLkBVn-49yZDjkJUrePs0BSwqYoLZd4Ami7fKCc7WdMxQV4e3IQxIRHKXI4607wneJPycu5L3c';
+

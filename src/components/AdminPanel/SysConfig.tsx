@@ -9,6 +9,8 @@ import { RefreshCw, CheckCircle, AlertTriangle, Sparkles, CheckCircle2 } from 'l
 import { SystemStatusCard } from './SystemStatusCard';
 import { PricesConfigCard } from './PricesConfigCard';
 import { SystemMaintenanceCard } from './SystemMaintenanceCard';
+import { PushNotificationToggle } from './PushNotificationToggle';
+
 
 export default function ConfigView() {
   const { theme, isDark, toggleTheme } = useTheme();
@@ -448,6 +450,11 @@ export default function ConfigView() {
           ✨ {actionMessage}
         </div>
       )}
+
+      {/* SECCIÓN DE NOTIFICACIONES PUSH & ALERTAS MÓVILES (FASE 17) */}
+      <div style={{ marginBottom: '30px' }}>
+        <PushNotificationToggle />
+      </div>
 
       {/* SECCIÓN DE MONITOREO Y APIS */}
       <SystemStatusCard

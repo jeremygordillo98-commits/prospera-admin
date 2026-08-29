@@ -70,14 +70,68 @@ self.addEventListener('periodicsync', (event) => {
   console.log('Periodic Sync:', event.tag);
 });
 
-// Soporte para Notificaciones Push
+// Soporte Avanzado para Notificaciones Push (Fase 17 - TWA APK & Web)
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.text() : 'Notificación de Prospera Admin';
+  let payload = {
+    title: '🛡️ Prospera Admin',
+    body: 'Nueva alerta del sistema.',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    url: '/admin',
+    tag: 'prospera-admin-alert'
+  };
+
+  if (event.data) {
+    try {
+      const parsed = event.data.json();
+      payload = { ...payload, ...parsed };
+    } catch (e) {
+      payload.body = event.data.text();
+    }
+  }
+
+  const notificationOptions = {
+    body: payload.body,
+    icon: payload.icon || '/icon-192.png',
+    badge: payload.badge || '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: payload.tag || 'prospera-admin-alert',
+    renotify: true,
+    data: {
+      url: payload.url || '/admin',
+      dateOfArrival: Date.now(),
+      primaryKey: 1
+    },
+    actions: [
+      { action: 'open', title: 'Abrir Admin' }
+    ]
+  };
+
   event.waitUntil(
-    self.registration.showNotification('Prospera Admin', {
-      body: data,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png'
+    self.registration.showNotification(payload.title, notificationOptions)
+  );
+});
+
+// Manejo del Clic en Notificación (Redirección Inteligente)
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/admin';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) {
+          if (client.url.includes(self.location.origin)) {
+            client.navigate(targetUrl);
+            return client.focus();
+          }
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
     })
   );
 });
+
