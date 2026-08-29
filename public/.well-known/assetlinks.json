@@ -7,6 +7,7 @@
       "namespace": "android_app",
       "package_name": "com.prosperafinanzas.admin.twa",
       "sha256_cert_fingerprints": [
+        "C0:51:94:80:33:F6:E5:1B:B7:E2:D4:7A:9E:2E:19:8C:A4:3B:FB:DC:79:74:88:80:B1:68:95:1A:97:92:02:91",
         "CF:26:E5:D3:EB:25:87:28:FD:83:5A:6E:A4:23:D5:34:3E:BF:E0:0A:0B:89:33:5B:96:16:48:1E:74:EB:C9:E1"
       ]
     }
@@ -19,6 +20,7 @@
       "namespace": "android_app",
       "package_name": "com.prosperafinanzas.admin",
       "sha256_cert_fingerprints": [
+        "C0:51:94:80:33:F6:E5:1B:B7:E2:D4:7A:9E:2E:19:8C:A4:3B:FB:DC:79:74:88:80:B1:68:95:1A:97:92:02:91",
         "CF:26:E5:D3:EB:25:87:28:FD:83:5A:6E:A4:23:D5:34:3E:BF:E0:0A:0B:89:33:5B:96:16:48:1E:74:EB:C9:E1"
       ]
     }
