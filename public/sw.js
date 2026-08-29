@@ -1,5 +1,5 @@
 // Service Worker para Prospera Admin PWA
-const CACHE_NAME = 'prospera-admin-v1';
+const CACHE_NAME = 'prospera-admin-v2';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -57,5 +57,27 @@ self.addEventListener('fetch', (event) => {
           return caches.match('/index.html');
         }
       })
+  );
+});
+
+// Soporte para Background Sync
+self.addEventListener('sync', (event) => {
+  console.log('Background Sync:', event.tag);
+});
+
+// Soporte para Periodic Background Sync
+self.addEventListener('periodicsync', (event) => {
+  console.log('Periodic Sync:', event.tag);
+});
+
+// Soporte para Notificaciones Push
+self.addEventListener('push', (event) => {
+  const data = event.data ? event.data.text() : 'Notificación de Prospera Admin';
+  event.waitUntil(
+    self.registration.showNotification('Prospera Admin', {
+      body: data,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png'
+    })
   );
 });
