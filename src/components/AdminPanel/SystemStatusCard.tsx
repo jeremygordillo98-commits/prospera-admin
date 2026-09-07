@@ -15,7 +15,12 @@ interface SystemStatusCardProps {
     sriStatus: StatusObj | null;
     aiStatus?: StatusObj | null;
     ga4Status?: StatusObj | null;
+    ga4ApiStatus?: StatusObj | null;
     resendStatus?: StatusObj | null;
+    pushStatus?: StatusObj | null;
+    vercelStatus?: StatusObj | null;
+    smtpStatus?: StatusObj | null;
+    r2Status?: StatusObj | null;
     rowCounts: {
         b2c: { perfiles: number; transacciones: number; soporte_tickets: number; public_news: number };
         b2b: { perfiles: number; empresas_gestionadas: number; soporte_tickets: number; user_notifications: number };
@@ -38,7 +43,12 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
     sriStatus,
     aiStatus,
     ga4Status,
+    ga4ApiStatus,
     resendStatus,
+    pushStatus,
+    vercelStatus,
+    smtpStatus,
+    r2Status,
     rowCounts,
     checkExternalApis,
     handlePurgeCache,
@@ -47,41 +57,82 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
     isDark,
     theme,
 }) => {
-    const renderPill = (name: string, icon: string, statusObj: StatusObj | null | undefined) => {
+    const renderPill = (
+        name: string,
+        icon: string,
+        statusObj: StatusObj | null | undefined,
+        locations: string[],
+        accentColor?: string
+    ) => {
         const isConn = statusObj?.status === 'connected';
-        const color = isConn ? '#00D68F' : statusObj?.status === 'slow' ? '#f59e0b' : '#ef4444';
+        const color = isConn
+            ? (statusObj.latency > 900 ? '#f59e0b' : '#00D68F')
+            : statusObj?.status === 'slow'
+            ? '#f59e0b'
+            : '#ef4444';
 
         return (
             <div style={{
                 display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 14px',
-                borderRadius: '12px',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: '14px',
                 background: theme.bg,
                 border: `1px solid ${theme.border}`,
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                whiteSpace: 'nowrap'
+                gap: '8px',
+                flex: '1 1 calc(33.333% - 12px)',
+                minWidth: '240px',
+                transition: 'all 0.2s ease',
+                boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.15)' : '0 2px 6px rgba(0,0,0,0.02)'
             }}>
-                <span>{icon}</span>
-                <span style={{ color: theme.text }}>{name}</span>
-                {checkingApis && !statusObj ? (
-                    <span style={{ color: theme.textSec, fontSize: '0.7rem' }}>...</span>
-                ) : statusObj ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginLeft: 'auto' }}>
-                        <div style={{
-                            width: 7, height: 7, borderRadius: '50%',
-                            background: color,
-                            boxShadow: `0 0 6px ${color}`
-                        }} />
-                        <span style={{ color, fontSize: '0.75rem', fontWeight: 800 }}>
-                            {isConn ? `${statusObj.latency}ms` : 'Error'}
-                        </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1rem' }}>{icon}</span>
+                        <span style={{ color: theme.text, fontWeight: 800, fontSize: '0.8rem' }}>{name}</span>
                     </div>
-                ) : (
-                    <span style={{ color: theme.textSec, fontSize: '0.7rem' }}>—</span>
-                )}
+
+                    {checkingApis && !statusObj ? (
+                        <span style={{ color: theme.textSec, fontSize: '0.7rem' }}>...</span>
+                    ) : statusObj ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{
+                                width: 7, height: 7, borderRadius: '50%',
+                                background: color,
+                                boxShadow: `0 0 6px ${color}`
+                            }} />
+                            <span style={{ color, fontSize: '0.75rem', fontWeight: 800 }}>
+                                {isConn ? `${statusObj.latency}ms` : 'Error'}
+                            </span>
+                        </div>
+                    ) : (
+                        <span style={{ color: theme.textSec, fontSize: '0.7rem' }}>—</span>
+                    )}
+                </div>
+
+                {/* Location Badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.62rem', color: theme.textSec, fontWeight: 600, marginRight: '2px' }}>
+                        En:
+                    </span>
+                    {locations.map((loc, idx) => (
+                        <span
+                            key={idx}
+                            style={{
+                                fontSize: '0.62rem',
+                                fontWeight: 700,
+                                padding: '2px 7px',
+                                borderRadius: '6px',
+                                background: accentColor ? `${accentColor}15` : `${theme.primary}12`,
+                                color: accentColor || theme.primary,
+                                border: `1px solid ${accentColor ? `${accentColor}30` : `${theme.primary}25`}`,
+                                whiteSpace: 'nowrap'
+                            }}
+                        >
+                            {loc}
+                        </span>
+                    ))}
+                </div>
             </div>
         );
     };
@@ -89,7 +140,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            {/* 1. BARRA DE TELEMETRÍA EN TIEMPO REAL (HUD HUD STRIP) */}
+            {/* 1. BARRA DE TELEMETRÍA EN TIEMPO REAL (HUD STRIP) */}
             <div style={{
                 background: theme.card,
                 borderRadius: '20px',
@@ -97,7 +148,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
                 padding: '20px',
                 boxShadow: isDark ? '0 8px 24px rgba(0,0,0,0.2)' : '0 4px 16px rgba(0,0,0,0.03)'
             }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ padding: '8px', borderRadius: '10px', background: theme.primary + '15', color: theme.primary }}>
                             <Activity size={18} />
@@ -107,7 +158,7 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
                                 Telemetría & Conectividad del Ecosistema
                             </h3>
                             <p style={{ margin: 0, fontSize: '0.75rem', color: theme.textSec }}>
-                                Semáforo en tiempo real de nodos de base de datos y microservicios integrados.
+                                Semáforo en vivo de los 12 nodos, microservicios y APIs integradas en cada proyecto de Prospera.
                             </p>
                         </div>
                     </div>
@@ -128,27 +179,43 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
                     </button>
                 </div>
 
-                {/* PILLS CONTAINER */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {/* Nodos Supabase */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '12px', background: theme.bg, border: `1px solid ${theme.border}`, fontSize: '0.78rem' }}>
-                        <CheckCircle size={14} style={{ color: b2cStatus?.status === 'connected' ? '#10b981' : theme.danger }} />
-                        <span style={{ fontWeight: 800, color: theme.text }}>Supabase B2C</span>
-                        <span style={{ color: '#10b981', fontWeight: 800, fontSize: '0.75rem' }}>{b2cStatus ? `${b2cStatus.latency}ms` : '—'}</span>
-                    </div>
+                {/* PILLS / CARDS CONTAINER */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                    {/* 1. Supabase B2C */}
+                    {renderPill('Supabase B2C (Principal)', '🟢', b2cStatus, ['App B2C', 'Admin', 'Landing'], '#10b981')}
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderRadius: '12px', background: theme.bg, border: `1px solid ${theme.border}`, fontSize: '0.78rem' }}>
-                        <CheckCircle size={14} style={{ color: b2bStatus?.status === 'connected' ? '#8b5cf6' : theme.danger }} />
-                        <span style={{ fontWeight: 800, color: theme.text }}>Supabase B2B (Pymes)</span>
-                        <span style={{ color: '#8b5cf6', fontWeight: 800, fontSize: '0.75rem' }}>{b2bStatus ? `${b2bStatus.latency}ms` : '—'}</span>
-                    </div>
+                    {/* 2. Supabase B2B */}
+                    {renderPill('Supabase B2B (Pymes)', '🟣', b2bStatus, ['Pymes Web', 'Pymes App', 'Admin'], '#8b5cf6')}
 
-                    {/* APIs Externas */}
-                    {renderPill('Brevo Email API', '📧', brevoStatus)}
-                    {renderPill('Google Analytics 4', '📊', ga4Status)}
-                    {renderPill('Prospera AI', '🧠', aiStatus)}
-                    {renderPill('Resend Engine', '✉️', resendStatus)}
-                    {renderPill('SRI en Línea', '🏛️', sriStatus)}
+                    {/* 3. Brevo Email API */}
+                    {renderPill('Brevo Email API v3', '📧', brevoStatus, ['Admin CRM', 'Pymes Web', 'Edge Functions'], '#3b82f6')}
+
+                    {/* 4. Google Analytics 4 (Web Tag) */}
+                    {renderPill('Google Analytics 4', '📊', ga4Status, ['App B2C', 'Pymes Web', 'Landing'], '#f59e0b')}
+
+                    {/* 5. GA4 Data API v1 (Google Cloud) */}
+                    {renderPill('GA4 Data API v1', '📈', ga4ApiStatus, ['Admin Realtime'], '#ea580c')}
+
+                    {/* 6. Web Push & FCM */}
+                    {renderPill('Web Push & FCM', '🔔', pushStatus, ['App B2C', 'Admin', 'Pymes App'], '#06b6d4')}
+
+                    {/* 7. Resend Email Engine */}
+                    {renderPill('Resend Engine', '✉️', resendStatus, ['Edge Functions / Cron'], '#ec4899')}
+
+                    {/* 8. SRI en Línea */}
+                    {renderPill('SRI en Línea (Ecuador)', '🏛️', sriStatus, ['Pymes Web', 'Pymes App', 'Admin'], '#14b8a6')}
+
+                    {/* 9. Prospera AI */}
+                    {renderPill('Prospera AI', '🧠', aiStatus, ['Pymes Web', 'Admin'], '#a855f7')}
+
+                    {/* 10. Vercel Web Analytics */}
+                    {renderPill('Vercel Analytics', '▲', vercelStatus, ['App B2C', 'Admin', 'Landing'], '#64748b')}
+
+                    {/* 11. Namecheap SMTP */}
+                    {renderPill('Namecheap SMTP', '📫', smtpStatus, ['@prosperafinanzas.com'], '#e11d48')}
+
+                    {/* 12. Cloudflare R2 */}
+                    {renderPill('Cloudflare R2 Storage', '☁️', r2Status, ['Pymes Web', 'Respaldo S3'], '#f97316')}
                 </div>
             </div>
 
