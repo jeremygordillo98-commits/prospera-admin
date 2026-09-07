@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 
 import { UserDetailsSidebar } from './UserDetailsSidebar';
 import { ControlFiltersHeader } from './ControlFiltersHeader';
@@ -48,7 +48,11 @@ export default function ControlView() {
     error?: string;
   } | null>(null);
 
-  const { data: fetchedUsers, isLoading: loading } = useQuery({
+  const [deleteUserModal, setDeleteUserModal] = useState<any | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+  const [deleteSuccessModal, setDeleteSuccessModal] = useState<string | null>(null);
+
+  const { data: fetchedUsers, isLoading: loading, refetch } = useQuery({
     queryKey: ['usuariosAdmin'],
     queryFn: async () => {
       const { data, error } = await supabase.from('perfiles').select('*').order('creado_en', { ascending: false });
@@ -56,6 +60,51 @@ export default function ControlView() {
       return (data || []).filter(u => u.rol !== 'admin');
     }
   });
+
+  const confirmDeleteUser = async () => {
+    if (!deleteUserModal) return;
+    const target = deleteUserModal;
+    setDeletingUser(true);
+    try {
+      const userId = target.id;
+
+      // 1. Intentar borrado a través de RPC con permisos para eliminar auth.users
+      try {
+        const { error: rpcErr } = await supabase.rpc('admin_delete_b2c_user', { target_user_id: userId });
+        if (!rpcErr) {
+          setDeleteUserModal(null);
+          setDeleteSuccessModal(`El usuario "${target.nombre_completo || target.email}" y todos sus datos (incluyendo credenciales de acceso) han sido eliminados.`);
+          await refetch();
+          return;
+        }
+      } catch (e) {
+        console.warn('[Admin] RPC admin_delete_b2c_user no disponible, procediendo con borrado manual:', e);
+      }
+
+      // 2. Fallback de purga en cascada en tablas de Supabase B2C
+      await supabase.from('transacciones').delete().eq('usuario_id', userId);
+      await supabase.from('conciliaciones').delete().eq('usuario_id', userId);
+      await supabase.from('recordatorios').delete().eq('usuario_id', userId);
+      await supabase.from('categorias').delete().eq('usuario_id', userId);
+      await supabase.from('cuentas').delete().eq('usuario_id', userId);
+      await supabase.from('user_push_subscriptions').delete().eq('user_id', userId);
+      await supabase.from('user_notification_preferences').delete().eq('user_id', userId);
+      await supabase.from('user_notifications').delete().eq('user_id', userId);
+      await supabase.from('soporte_tickets').delete().eq('usuario_id', userId);
+      
+      // 3. Eliminar registro del perfil
+      const { error: perfilErr } = await supabase.from('perfiles').delete().eq('id', userId);
+      if (perfilErr) throw perfilErr;
+
+      setDeleteUserModal(null);
+      setDeleteSuccessModal(`El usuario "${target.nombre_completo || target.email}" y todos sus datos han sido eliminados del sistema.`);
+      await refetch();
+    } catch (err: any) {
+      alert(`❌ Error al eliminar usuario: ${err.message || err}`);
+    } finally {
+      setDeletingUser(false);
+    }
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -293,6 +342,9 @@ export default function ControlView() {
                                     <button onClick={() => handleResetPassword(user.email)} style={{ background: theme.danger + '15', border: 'none', color: theme.danger, width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Resetear Clave"><IconKey /></button>
                                     <button onClick={() => handleImpersonate(user.email)} style={{ background: '#8b5cf615', border: 'none', color: '#8b5cf6', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Ver como Usuario"><IconEye /></button>
                                     <button onClick={() => setSelectedUser(user)} style={{ background: theme.primary, border: 'none', color: isDark ? '#000' : '#fff', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${theme.primary}40` }} title="Permisos"><IconSettings /></button>
+                                    <button onClick={() => setDeleteUserModal(user)} style={{ background: 'rgba(239, 68, 68, 0.15)', border: 'none', color: '#ef4444', width: 44, height: 44, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Eliminar Usuario Definitivamente">
+                                        <Trash2 size={18} />
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -403,6 +455,9 @@ export default function ControlView() {
                                             </button>
                                             <button onClick={() => setSelectedUser(user)} style={{ background: theme.primary, border: 'none', color: isDark ? '#000' : '#fff', width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', boxShadow: `0 4px 12px ${theme.primary}30` }} className="hover-scale" title="Permisos">
                                                 <IconSettings />
+                                            </button>
+                                            <button onClick={() => setDeleteUserModal(user)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444', width: 38, height: 38, borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} className="hover-scale" title="Eliminar Usuario Definitivamente">
+                                                <Trash2 size={18} />
                                             </button>
                                         </div>
                                     </td>
@@ -611,6 +666,172 @@ export default function ControlView() {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE USUARIO B2C */}
+        {deleteUserModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: 16
+          }} onClick={() => !deletingUser && setDeleteUserModal(null)}>
+            <div style={{
+              background: isDark ? '#1e293b' : '#ffffff',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              borderRadius: 24,
+              width: '100%',
+              maxWidth: 460,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+              overflow: 'hidden',
+              padding: '32px 24px',
+              color: theme.text
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '16px',
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#ef4444',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <Trash2 size={26} />
+              </div>
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 900, textAlign: 'center', color: '#ef4444' }}>
+                ¿Eliminar Usuario Definitivamente?
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: theme.textSec, lineHeight: 1.5, textAlign: 'center', margin: '0 0 20px' }}>
+                Esta acción eliminará de forma irreversible al usuario <strong style={{ color: theme.text }}>"{deleteUserModal.nombre_completo || deleteUserModal.email}"</strong> y purgará en cascada todas sus cuentas, transacciones, presupuestos, recordatorios y tickets de soporte.
+              </p>
+
+              <div style={{
+                background: isDark ? 'rgba(0,0,0,0.25)' : 'rgba(0,0,0,0.03)',
+                border: `1px solid ${theme.border}`,
+                borderRadius: 14,
+                padding: '14px 16px',
+                marginBottom: 24,
+                fontSize: '0.82rem',
+                color: theme.textSec,
+                lineHeight: 1.6
+              }}>
+                <div><strong>Email:</strong> {deleteUserModal.email}</div>
+                {deleteUserModal.pais && <div><strong>País:</strong> {deleteUserModal.pais}</div>}
+                {deleteUserModal.celular && <div><strong>Celular:</strong> {deleteUserModal.celular}</div>}
+                <div><strong>Registrado:</strong> {deleteUserModal.creado_en ? new Date(deleteUserModal.creado_en).toLocaleDateString('es-EC') : '---'}</div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={() => setDeleteUserModal(null)}
+                  disabled={deletingUser}
+                  style={{
+                    background: 'transparent',
+                    border: `1px solid ${theme.border}`,
+                    color: theme.textSec,
+                    flex: 1,
+                    padding: '12px',
+                    borderRadius: 14,
+                    fontWeight: 700,
+                    cursor: deletingUser ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmDeleteUser}
+                  disabled={deletingUser}
+                  style={{
+                    background: '#ef4444',
+                    border: 'none',
+                    color: '#ffffff',
+                    flex: 1.4,
+                    padding: '12px',
+                    borderRadius: 14,
+                    fontWeight: 800,
+                    cursor: deletingUser ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8
+                  }}
+                >
+                  {deletingUser ? (
+                    <>
+                      <Loader2 className="animate-spin" size={16} />
+                      Eliminando...
+                    </>
+                  ) : (
+                    'Sí, Eliminar Todo'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE ÉXITO DE ELIMINACIÓN */}
+        {deleteSuccessModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2147483647,
+            padding: 16
+          }} onClick={() => setDeleteSuccessModal(null)}>
+            <div style={{
+              background: isDark ? '#1e293b' : '#ffffff',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 24,
+              width: '100%',
+              maxWidth: 420,
+              padding: '30px 24px',
+              textAlign: 'center',
+              color: theme.text,
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{
+                width: 52, height: 52, borderRadius: '50%',
+                background: 'rgba(16, 185, 129, 0.15)',
+                color: '#10b981',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px',
+                fontSize: '1.6rem',
+                fontWeight: 900
+              }}>
+                ✓
+              </div>
+              <h3 style={{ margin: '0 0 10px', fontSize: '1.2rem', fontWeight: 900, color: '#10b981' }}>
+                Usuario Eliminado
+              </h3>
+              <p style={{ fontSize: '0.88rem', color: theme.textSec, lineHeight: 1.5, margin: '0 0 24px' }}>
+                {deleteSuccessModal}
+              </p>
+              <button
+                onClick={() => setDeleteSuccessModal(null)}
+                style={{
+                  background: theme.primary,
+                  border: 'none',
+                  color: isDark ? '#000' : '#fff',
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: 14,
+                  fontWeight: 800,
+                  cursor: 'pointer'
+                }}
+              >
+                Entendido
+              </button>
             </div>
           </div>
         )}
