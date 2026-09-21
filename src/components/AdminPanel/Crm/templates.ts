@@ -171,5 +171,95 @@ export const EMAIL_TEMPLATES: EmailTemplate[] = [
   </div>
 </div>
     `.trim()
+  },
+  {
+    id: 'reengagement_pymes',
+    name: '🔄 Reactivación - Prospera Pymes (Prevención Churn)',
+    category: 'ventas',
+    target: 'pymes',
+    subject: 'Te extrañamos en Prospera Pymes — Reactiva tu gestión contable hoy 🚀',
+    content: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <h2 style="color: #00956A; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">PROSPERA PYMES</h2>
+    <span style="font-size: 11px; color: #00956A; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">Gestión y Automatización Contable</span>
+  </div>
+  
+  <p>Estimado/a colega contador/a,</p>
+  
+  <p>Notamos que hace varios días no ingresas a tu panel contable en <strong>Prospera Pymes</strong>. Queremos asegurarnos de que todo esté marchando excelente con tus empresas gestionadas.</p>
+  
+  <p>Hemos añadido nuevas mejoras para facilitar tu trabajo mensual:</p>
+  
+  <div style="background: #f0fdf4; border-left: 4px solid #00956A; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;">
+    <ul style="margin: 0; padding-left: 20px; font-size: 0.9rem; color: #166534;">
+      <li style="margin-bottom: 6px;"><strong>Importador Masivo SRI:</strong> Carga facturas XML en lote con mapeo tributario inteligente.</li>
+      <li style="margin-bottom: 6px;"><strong>Alertas ATS & Calendario:</strong> Recordatorios automáticos según el 9º dígito del RUC.</li>
+      <li style="margin-bottom: 0;"><strong>Reportes en PDF Premium:</strong> Balances listos para entregar a tus clientes en 1 clic.</li>
+    </ul>
+  </div>
+  
+  <div style="text-align: center; margin: 28px 0;">
+    <a href="https://pymes.prosperafinanzas.com" style="background: linear-gradient(135deg, #00956A, #00b37e); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0, 149, 106, 0.25); display: inline-block;">Ingresar a mi Panel Contable</a>
+  </div>
+  
+  <p>Si tienes alguna duda o necesitas ayuda para configurar el plan de cuentas de alguna empresa, recuerda que nuestro equipo de soporte está siempre disponible para ti.</p>
+  
+  <p style="margin-top: 30px; font-size: 0.9rem; color: #334155; line-height: 1.6;">
+    Un saludo cordial,<br />
+    <strong style="color: #1e293b; font-size: 0.95rem;">Equipo de Éxito del Cliente</strong><br />
+    <span style="color: #64748b; font-weight: 600;">Prospera Finanzas</span>
+  </p>
+  
+  <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+  
+  <div style="text-align: center; font-size: 11px; color: #94a3b8;">
+    <p>Prospera Ecuador S.A.S. | soporte@prosperafinanzas.com | +593 98 831 3486</p>
+  </div>
+</div>
+    `.trim()
+  },
+  {
+    id: 'reengagement_app',
+    name: '🔄 Reactivación - Prospera APP (Prevención Churn)',
+    category: 'ventas',
+    target: 'app',
+    subject: '¿Todo bien con tus finanzas? Vuelve a registrar tus movimientos en Prospera 📱',
+    content: `
+<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <h2 style="color: #3b82f6; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">PROSPERA APP</h2>
+    <span style="font-size: 11px; color: #3b82f6; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">Finanzas Personales en tus Manos</span>
+  </div>
+  
+  <p>¡Hola!</p>
+  
+  <p>Vemos que han pasado algunos días desde tu último registro en <strong>Prospera APP</strong>. La constancia es el secreto número uno para mantener tus finanzas bajo control y cumplir tus metas de ahorro.</p>
+  
+  <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;">
+    <p style="margin: 0; font-size: 0.9rem; color: #1e40af; font-weight: 600;">
+      💡 Tip rápido: Solo toma 10 segundos registrar tus gastos diarios para evitar fugas de capital a fin de mes.
+    </p>
+  </div>
+  
+  <div style="text-align: center; margin: 28px 0;">
+    <a href="https://app.prosperafinanzas.com" style="background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25); display: inline-block;">Abrir mi App de Finanzas</a>
+  </div>
+  
+  <p>¡Retoma el control de tu patrimonio hoy mismo!</p>
+  
+  <p style="margin-top: 30px; font-size: 0.9rem; color: #334155; line-height: 1.6;">
+    Un saludo cordial,<br />
+    <strong style="color: #1e293b; font-size: 0.95rem;">Equipo Prospera</strong><br />
+    <span style="color: #64748b; font-weight: 600;">prosperafinanzas.com</span>
+  </p>
+  
+  <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+  
+  <div style="text-align: center; font-size: 11px; color: #94a3b8;">
+    <p>soporte@prosperafinanzas.com | +593 98 831 3486</p>
+  </div>
+</div>
+    `.trim()
   }
 ];

@@ -4,21 +4,48 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabase';
 import { supabaseContable } from '../../services/supabaseContable';
 import CohortAnalysis from './CohortAnalysis';
+import ChurnPreventionTab from './ChurnPreventionTab';
+import { generarReporteEjecutivoPDF, ExecutiveReportData } from '../../services/executiveReportPdfGenerator';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   ScatterChart, Scatter, ZAxis, FunnelChart, Funnel, LabelList, Legend
 } from 'recharts';
-import { Users, Building2, TrendingUp, DollarSign, BarChart3, Loader2, FileText } from 'lucide-react';
+import { Users, Building2, TrendingUp, DollarSign, BarChart3, Loader2, FileText, Download, ShieldAlert } from 'lucide-react';
 
 export default function ReportsView() {
   const { theme, isDark } = useTheme();
-  const [activeDashboard, setActiveDashboard] = useState<'b2c' | 'b2b'>('b2c');
+  const [activeDashboard, setActiveDashboard] = useState<'b2c' | 'b2b' | 'churn'>('b2c');
   const [data, setData] = useState<any[]>([]);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [precios] = useState({ 
     ia: 3.0, // Precio agrupado para módulos IA (Chat, Magic, Insights)
     pro: 0.3, 
     base: 0.1 
   });
+
+  // Cargar logotipo en Base64 para el PDF
+  useEffect(() => {
+    const convertUriToBase64 = async (url: string) => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.error("Error cargando imagen de logo para reporte:", err);
+        return null;
+      }
+    };
+
+    convertUriToBase64('/logo-proforma.png').then((base64) => {
+      if (base64) setLogoBase64(base64);
+    });
+  }, []);
 
   // --- QUERY ECOSISTEMA GLOBAL (KPIs SISTEMA) ---
   const { data: systemKPIs } = useQuery({
@@ -40,9 +67,12 @@ export default function ReportsView() {
   const { data: fetchedB2CData, isLoading: loadingB2C } = useQuery({
     queryKey: ['reportDataB2C'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('perfiles').select('*');
-      if (error) throw error;
-      return data || [];
+      const { data: perfiles, error: pErr } = await supabase.from('perfiles').select('*');
+      if (pErr) throw pErr;
+      const { data: transacciones, error: tErr } = await supabase.from('transacciones').select('usuario_id, fecha');
+      if (tErr) console.warn('Error fetching transacciones for reports:', tErr);
+
+      return { perfiles: perfiles || [], transacciones: transacciones || [] };
     }
   });
 
@@ -61,7 +91,7 @@ export default function ReportsView() {
   });
 
   useEffect(() => {
-    if (fetchedB2CData) setData(fetchedB2CData);
+    if (fetchedB2CData?.perfiles) setData(fetchedB2CData.perfiles);
   }, [fetchedB2CData]);
 
   // --- 1. LÓGICA B2C APP ---
@@ -188,6 +218,119 @@ export default function ReportsView() {
     ];
   }, [fetchedB2BData]);
 
+  const handleDownloadExecutivePdf = async () => {
+    try {
+      setIsGeneratingPdf(true);
+      const now = new Date();
+      const reportDate = now.toLocaleDateString('es-EC', { day: '2-digit', month: 'long', year: 'numeric' });
+      const periodLabel = now.toLocaleDateString('es-EC', { month: 'long', year: 'numeric' }).toUpperCase();
+
+      // Procesar todas las cuentas para el PDF (B2C y B2B)
+      const allAccountsAudit: Array<{
+        nombre: string;
+        email: string;
+        tipo: 'B2C' | 'B2B';
+        diasInactivo: number;
+        estado: string;
+      }> = [];
+
+      const nowTime = now.getTime();
+
+      // B2C
+      if (fetchedB2CData?.perfiles) {
+        const lastTxMap = new Map<string, string>();
+        (fetchedB2CData.transacciones || []).forEach(tx => {
+          if (!tx.usuario_id || !tx.fecha) return;
+          const cur = lastTxMap.get(tx.usuario_id);
+          if (!cur || new Date(tx.fecha).getTime() > new Date(cur).getTime()) {
+            lastTxMap.set(tx.usuario_id, tx.fecha);
+          }
+        });
+
+        fetchedB2CData.perfiles.forEach(p => {
+          const lastTx = lastTxMap.get(p.id);
+          const best = lastTx || p.ultimo_acceso || p.creado_en || new Date().toISOString();
+          const days = Math.max(0, Math.floor((nowTime - new Date(best).getTime()) / (1000 * 60 * 60 * 24)));
+          
+          let estado = '[Activo] Normal (<=7d)';
+          if (days > 30) estado = '[Critico] Inactivo (>30d)';
+          else if (days > 14) estado = '[Alerta] Churn (15-30d)';
+          else if (days > 7) estado = '[En Riesgo] (8-14d)';
+
+          allAccountsAudit.push({
+            nombre: p.nombre || 'Usuario App',
+            email: p.email || 'N/A',
+            tipo: 'B2C',
+            diasInactivo: days,
+            estado
+          });
+        });
+      }
+
+      // B2B
+      if (fetchedB2BData?.perfiles) {
+        fetchedB2BData.perfiles.forEach(p => {
+          const best = p.ultimo_acceso || p.creado_en || new Date().toISOString();
+          const days = Math.max(0, Math.floor((nowTime - new Date(best).getTime()) / (1000 * 60 * 60 * 24)));
+          
+          let estado = '[Activo] Normal (<=7d)';
+          if (days > 30) estado = '[Critico] Inactivo (>30d)';
+          else if (days > 14) estado = '[Alerta] Churn (15-30d)';
+          else if (days > 7) estado = '[En Riesgo] (8-14d)';
+
+          allAccountsAudit.push({
+            nombre: p.nombre_completo || 'Contador Pymes',
+            email: p.email || 'N/A',
+            tipo: 'B2B',
+            diasInactivo: days,
+            estado
+          });
+        });
+      }
+
+      // Ordenar por días de inactividad (los más activos primero o los más inactivos según corresponda)
+      allAccountsAudit.sort((a, b) => b.diasInactivo - a.diasInactivo);
+
+      const totalUsers = data.length + (fetchedB2BData?.perfiles?.length || 0);
+      const totalChurnRisk = allAccountsAudit.filter(c => c.diasInactivo > 14).length;
+      const churnRatePercent = totalUsers > 0 ? (totalChurnRisk / totalUsers) * 100 : 0;
+
+      const empresas = fetchedB2BData?.empresas || [];
+      const conPdf = empresas.filter(e => e.permiso_reportes_pdf).length;
+      const conAts = empresas.filter(e => e.permiso_descarga_ats).length;
+      const conMailer = empresas.filter(e => e.permiso_comunicacion_cliente).length;
+
+      const conPro = data.filter(u => u.permiso_subcategorias || u.permiso_conciliacion).length;
+      const conIA = data.filter(u => u.permiso_chat || u.permiso_magic).length;
+
+      const reportPayload: ExecutiveReportData = {
+        reportDate,
+        periodLabel,
+        totalUsersB2C: data.length,
+        totalContadoresB2B: fetchedB2BData?.perfiles?.length || 0,
+        totalEmpresasB2B: empresas.length,
+        xmlsThisMonth: systemKPIs?.xmlsThisMonth || 0,
+        mrrB2C: financialStatsB2C.mrr,
+        mrrB2B: financialStatsB2B.mrr,
+        mrrTotal: financialStatsB2C.mrr + financialStatsB2B.mrr,
+        arpuB2C: financialStatsB2C.arpu,
+        arpuB2B: financialStatsB2B.arpu,
+        totalChurnRisk,
+        churnRatePercent,
+        b2bAdoption: { pdf: conPdf, ats: conAts, mailer: conMailer },
+        b2cAdoption: { pro: conPro, ia: conIA },
+        allAccountsAudit
+      };
+
+      const doc = generarReporteEjecutivoPDF(reportPayload, logoBase64);
+      doc.save(`Reporte_Ejecutivo_Prospera_${now.toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Error generando reporte ejecutivo PDF:', err);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const cardStyle = {
     background: theme.card,
     border: `1px solid ${theme.border}`,
@@ -209,7 +352,7 @@ export default function ReportsView() {
   };
 
   const tabStyle = (active: boolean) => ({
-    padding: '10px 24px',
+    padding: '10px 20px',
     borderRadius: '14px',
     border: 'none',
     background: active ? theme.primary : 'transparent',
@@ -219,40 +362,82 @@ export default function ReportsView() {
     cursor: 'pointer',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     boxShadow: active ? `0 6px 20px ${theme.primary}40` : 'none',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
   });
 
-  const isLoading = activeDashboard === 'b2c' ? loadingB2C : loadingB2B;
+  const isLoading = activeDashboard === 'b2c' ? loadingB2C : activeDashboard === 'b2b' ? loadingB2B : false;
 
   return (
     <div style={{ paddingBottom: '60px', animation: 'fadeIn 0.5s ease' }}>
       
-      {/* HEADER Y SELECTOR DE DASHBOARD DUAL */}
+      {/* HEADER Y SELECTOR DE DASHBOARD MULTI-PESTAÑA */}
       <div style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '20px', marginBottom: '35px' }}>
         <div>
-          <h2 style={{ color: theme.text, margin: 0, fontWeight: 900, letterSpacing: '-0.5px' }}>📊 Business Intelligence</h2>
-          <p style={{ color: theme.textSec, fontSize: '0.85rem', margin: '5px 0 0 0' }}>Estadísticas consolidadas y métricas reales del ecosistema Prospera.</p>
+          <h2 style={{ color: theme.text, margin: 0, fontWeight: 900, letterSpacing: '-0.5px' }}>📊 Business Intelligence & Retención</h2>
+          <p style={{ color: theme.textSec, fontSize: '0.85rem', margin: '5px 0 0 0' }}>Estadísticas consolidadas, auditoría de retención y métricas reales del ecosistema.</p>
         </div>
 
-        {/* SELECTOR GLASSMORPHISM */}
-        <div style={{ 
-          display: 'flex', 
-          background: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(241, 245, 249, 0.8)', 
-          padding: '6px', 
-          borderRadius: '18px',
-          border: `1px solid ${theme.border}`
-        }}>
-          <button 
-            onClick={() => setActiveDashboard('b2c')} 
-            style={tabStyle(activeDashboard === 'b2c')}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+          
+          {/* BOTÓN EXPORTAR REPORTE EJECUTIVO PDF */}
+          <button
+            onClick={handleDownloadExecutivePdf}
+            disabled={isGeneratingPdf}
+            style={{
+              background: 'linear-gradient(135deg, #00956A, #00b37e)',
+              color: '#ffffff',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '14px',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              cursor: isGeneratingPdf ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 15px rgba(0, 149, 106, 0.3)',
+              transition: 'all 0.2s',
+              opacity: isGeneratingPdf ? 0.7 : 1
+            }}
           >
-            📱 Prospera App (B2C)
+            {isGeneratingPdf ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+            {isGeneratingPdf ? 'Generando PDF...' : '📄 Descargar Reporte Ejecutivo PDF'}
           </button>
-          <button 
-            onClick={() => setActiveDashboard('b2b')} 
-            style={tabStyle(activeDashboard === 'b2b')}
-          >
-            🏢 Prospera Pymes (B2B)
-          </button>
+
+          {/* SELECTOR GLASSMORPHISM */}
+          <div style={{ 
+            display: 'flex', 
+            background: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(241, 245, 249, 0.8)', 
+            padding: '5px', 
+            borderRadius: '18px',
+            border: `1px solid ${theme.border}`
+          }}>
+            <button 
+              onClick={() => setActiveDashboard('b2c')} 
+              style={tabStyle(activeDashboard === 'b2c')}
+            >
+              📱 App (B2C)
+            </button>
+            <button 
+              onClick={() => setActiveDashboard('b2b')} 
+              style={tabStyle(activeDashboard === 'b2b')}
+            >
+              🏢 Pymes (B2B)
+            </button>
+            <button 
+              onClick={() => setActiveDashboard('churn')} 
+              style={{
+                ...tabStyle(activeDashboard === 'churn'),
+                background: activeDashboard === 'churn' ? '#ef4444' : 'transparent',
+                boxShadow: activeDashboard === 'churn' ? '0 6px 20px rgba(239, 68, 68, 0.4)' : 'none'
+              }}
+            >
+              <ShieldAlert size={15} />
+              Prevención Churn (&gt;14d)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -484,6 +669,11 @@ export default function ReportsView() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 3. VISTA DE PREVENCIÓN DE CHURN & AUDITORÍA DE RETENCIÓN */}
+      {!isLoading && activeDashboard === 'churn' && (
+        <ChurnPreventionTab />
       )}
 
       <style>
