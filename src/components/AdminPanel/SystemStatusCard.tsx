@@ -29,6 +29,8 @@ interface SystemStatusCardProps {
     handlePurgeCache: () => void;
     handleCleanStorage: () => void;
     toggleTheme: () => void;
+    themeMode?: 'light' | 'dark' | 'high-contrast';
+    setThemeMode?: (mode: 'light' | 'dark' | 'high-contrast') => void;
     isDark: boolean;
     theme: any;
     cardStyle: any;
@@ -54,6 +56,8 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
     handlePurgeCache,
     handleCleanStorage,
     toggleTheme,
+    themeMode = 'dark',
+    setThemeMode,
     isDark,
     theme,
 }) => {
@@ -325,27 +329,61 @@ export const SystemStatusCard: React.FC<SystemStatusCardProps> = ({
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {/* Theme switcher */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: theme.bg, borderRadius: '14px', border: `1px solid ${theme.border}` }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 14px', background: theme.bg, borderRadius: '14px', border: `1px solid ${theme.border}` }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {isDark ? <Moon size={16} style={{ color: '#fbbf24' }} /> : <Sun size={16} style={{ color: '#6366f1' }} />}
+                                {themeMode === 'high-contrast' ? <Sun size={16} style={{ color: '#FACC15' }} /> : isDark ? <Moon size={16} style={{ color: '#fbbf24' }} /> : <Sun size={16} style={{ color: '#6366f1' }} />}
                                 <span style={{ fontWeight: 800, fontSize: '0.82rem', color: theme.text }}>Apariencia Admin</span>
                             </div>
-                            <button
-                                onClick={toggleTheme}
-                                style={{
-                                    background: isDark ? '#fff' : '#000',
-                                    color: isDark ? '#000' : '#fff',
-                                    border: 'none',
-                                    padding: '6px 14px',
-                                    borderRadius: '10px',
-                                    fontWeight: 800,
-                                    cursor: 'pointer',
-                                    fontSize: '0.75rem',
-                                    transition: 'all 0.2s'
-                                }}
-                            >
-                                Modo {isDark ? 'Claro ☀️' : 'Oscuro 🌙'}
-                            </button>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                                <button
+                                    onClick={() => setThemeMode ? setThemeMode('light') : toggleTheme()}
+                                    style={{
+                                        background: themeMode === 'light' ? '#fff' : 'transparent',
+                                        color: themeMode === 'light' ? '#0f172a' : theme.textSec,
+                                        border: themeMode === 'light' ? '1.5px solid #059669' : `1px solid ${theme.border}`,
+                                        padding: '6px 8px',
+                                        borderRadius: '8px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        fontSize: '0.72rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    ☀️ Claro
+                                </button>
+                                <button
+                                    onClick={() => setThemeMode ? setThemeMode('dark') : toggleTheme()}
+                                    style={{
+                                        background: themeMode === 'dark' ? '#1e293b' : 'transparent',
+                                        color: themeMode === 'dark' ? '#00D68F' : theme.textSec,
+                                        border: themeMode === 'dark' ? '1.5px solid #00D68F' : `1px solid ${theme.border}`,
+                                        padding: '6px 8px',
+                                        borderRadius: '8px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        fontSize: '0.72rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    🌙 Oscuro
+                                </button>
+                                <button
+                                    onClick={() => setThemeMode ? setThemeMode('high-contrast') : toggleTheme()}
+                                    style={{
+                                        background: themeMode === 'high-contrast' ? '#000000' : 'transparent',
+                                        color: themeMode === 'high-contrast' ? '#FACC15' : theme.textSec,
+                                        border: themeMode === 'high-contrast' ? '1.5px solid #FACC15' : `1px solid ${theme.border}`,
+                                        padding: '6px 8px',
+                                        borderRadius: '8px',
+                                        fontWeight: 800,
+                                        cursor: 'pointer',
+                                        fontSize: '0.72rem',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    🟡 Contraste
+                                </button>
+                            </div>
                         </div>
 
                         {/* React Query Cache & Local Storage */}

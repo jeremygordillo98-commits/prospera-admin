@@ -13,7 +13,7 @@ import { PushNotificationToggle } from './PushNotificationToggle';
 
 
 export default function ConfigView() {
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme, isDark, toggleTheme, themeMode, setThemeMode } = useTheme();
   const queryClient = useQueryClient();
   const { precios: preciosDB, updatePrecios } = useData();
 
@@ -522,6 +522,8 @@ export default function ConfigView() {
           handlePurgeCache={handlePurgeCache}
           handleCleanStorage={handleCleanStorage}
           toggleTheme={toggleTheme}
+          themeMode={themeMode}
+          setThemeMode={setThemeMode}
           isDark={isDark}
           theme={theme}
           cardStyle={cardStyle}

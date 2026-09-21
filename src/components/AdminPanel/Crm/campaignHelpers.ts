@@ -21,6 +21,20 @@ export const DEFAULT_PLAIN_TEXTS: Record<string, { name: string; subject: string
   }
 };
 
+// Plantillas exclusivas para el módulo de Reportes / Prevención de Churn
+export const REENGAGEMENT_PLAIN_TEXTS: Record<string, { name: string; subject: string; text: string }> = {
+  reengagement_pymes: {
+    name: 'Reactivación Pymes',
+    subject: '¿Necesitas apoyo con la contabilidad de tus empresas en Prospera? 🏢',
+    text: `Hola {{nombre}},\n\nNotamos que han pasado varios días sin actividad en tu panel de Prospera Pymes.\n\nQueremos asegurarnos de que todo marche a la perfección con la gestión de tus empresas, emisión de facturas y conciliación bancaria.\n\nSi necesitas asistencia personalizada para configurar tu plan de cuentas o tienes inquietudes sobre normativas del SRI, nuestro equipo de soporte técnico está disponible para ayudarte.\n\n¡Ingresa hoy mismo y mantén al día las finanzas de tus clientes!\n\nUn saludo cordial,\nEquipo de Éxito del Cliente\nProspera Finanzas`
+  },
+  reengagement_app: {
+    name: 'Reactivación App',
+    subject: '¿Todo bien con tus finanzas? Vuelve a registrar tus gastos en Prospera 📱',
+    text: `Hola {{nombre}},\n\nVemos que han pasado {{dias}} días desde tu último registro en Prospera APP. Mantener la constancia diaria es la clave fundamental para alcanzar tus metas de ahorro y evitar fugas de dinero imprevistas.\n\nRecuerda que solo te toma 10 segundos registrar tus transacciones del día y revisar tu presupuesto mensual.\n\n¡Retoma el control de tu patrimonio hoy mismo!\n\nUn saludo cordial,\nEquipo de Éxito del Cliente\nProspera Finanzas`
+  }
+};
+
 // HTML Email Layout Generator
 export const generateCampaignHtml = (bodyText: string, templateId: string) => {
   const paragraphs = bodyText
@@ -47,6 +61,18 @@ export const generateCampaignHtml = (bodyText: string, templateId: string) => {
     ctaSection = `
       <div style="text-align: center; margin: 28px 0;">
         <a href="https://app.prosperafinanzas.com" style="background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25); display: inline-block;">Descargar App y Registrarme</a>
+      </div>
+    `;
+  } else if (templateId === 'reengagement_pymes') {
+    ctaSection = `
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="https://pymes.prosperafinanzas.com" style="background: linear-gradient(135deg, #00956A, #00b37e); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(0, 149, 106, 0.25); display: inline-block;">Ingresar a mi Panel Contable</a>
+      </div>
+    `;
+  } else if (templateId === 'reengagement_app') {
+    ctaSection = `
+      <div style="text-align: center; margin: 28px 0;">
+        <a href="https://app.prosperafinanzas.com" style="background: linear-gradient(135deg, #3b82f6, #60a5fa); color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.25); display: inline-block;">Abrir mi App de Finanzas</a>
       </div>
     `;
   }
